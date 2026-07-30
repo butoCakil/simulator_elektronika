@@ -176,7 +176,30 @@
      antara kanal 1 dan kanal 2. */
   .kanBlok{border-left:3px solid var(--rule);padding-left:9px;margin-bottom:7px}
   .kanBlok+.kanBlok{padding-top:7px;border-top:1px solid var(--rule)}
-  .kanNama{font-size:12px;letter-spacing:.06em;min-width:30px;color:var(--silk)}
+  .kanNama{font-size:12.5px;letter-spacing:.06em;min-width:26px;color:var(--silk)}
+  /* Satu kendali = satu bingkai. Tombol di dalamnya tanpa bingkai sendiri,
+     sehingga jelas bahwa − nilai + adalah SATU kendali, bukan tiga tombol
+     yang tidak berhubungan. */
+  .grp{display:inline-flex;align-items:stretch;border:1px solid var(--rule);
+    border-radius:3px;overflow:hidden;flex:none}
+  .grp button{border:none;border-radius:0;height:30px;min-width:31px;padding:0 7px}
+  .grp button+button{border-left:1px solid var(--rule)}
+  .grp .val{display:inline-flex;align-items:center;justify-content:center;
+    min-width:84px;padding:0 7px;color:var(--pilih);font-size:11.5px;
+    font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;
+    border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+  .cap{font-size:9px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--muted);margin-right:1px;white-space:nowrap}
+  /* Pasangan nama-nilai jadi satu satuan: nilainya menempel pada namanya,
+     ruang kosong jatuh di kanan — bukan di antara nama dan angkanya. */
+  .bc{display:inline-flex;align-items:baseline;gap:5px;min-width:104px}
+  .bc.w2{min-width:112px}
+  .bc i{font-style:normal;color:var(--muted);font-size:9.5px;
+    text-transform:none;letter-spacing:.04em;white-space:nowrap}
+  .bc b{font-weight:400;text-align:left;font-variant-numeric:tabular-nums}
+  body.proyektor .bc{min-width:128px}
+  body.proyektor .grp .val{min-width:104px}
+  body.proyektor .grp button{height:38px;min-width:38px}
   .kanGlob{border-top:1px solid var(--rule);padding-top:8px;margin-top:2px}
   /* Ruang kendali bertinggi tetap: layar skop tidak bergeser saat kanal
      muncul atau hilang — seperti osiloskop yang layarnya memang tidak pindah. */
@@ -188,14 +211,21 @@
     .bar{gap:5px;padding:6px}
     /* hanya yang sering dipakai saat mengajar tinggal di bilah; sisanya
        pindah ke menu ⋯ yang sudah bisa digulir */
-    #bJeda,#bUndo,#bRedo,#bPas,#bSkala,#bTampil,#bReset{display:none}
+    /* Undo dan redo TETAP di bilah: saat menyunting di HP keduanya dipakai
+       terus-menerus, dan menyembunyikannya di menu justru menyulitkan. */
+    #bJeda,#bPas,#bSkala,#bTampil,#bReset{display:none}
+    #bPower span,#bTambah span{display:none}
+    #bPower,#bTambah{min-width:44px;padding:0 10px}
     .lebar-saja{display:none !important}
     #skopctl{min-height:0}
     .kan{gap:5px;font-size:11px}
     .kan .nm{min-width:0}
-    .kan .vd{min-width:66px}
-    .kan .bc b.w1,.kan .bc b.w2{min-width:58px}
-    .kan button{min-width:30px;padding:0 6px}
+    .grp .val{min-width:70px;font-size:11px}
+    .grp button{min-width:29px;padding:0 5px}
+    .bc,.bc.w2{min-width:92px}
+    .kan button{min-width:30px;padding:0 7px}
+    /* mode proyektor tidak berguna di HP */
+    #mProyektor{display:none}
     #scope{height:190px}
   }
   .skoptb{position:absolute;top:6px;right:52px;z-index:6;height:36px;padding:0 12px;
@@ -247,11 +277,15 @@
     <button id="mJeda2"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg><span>Jeda / Lanjut</span></button>
     <button id="mUndo2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg><span>Urungkan</span></button>
     <button id="mRedo2"><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg><span>Ulangi</span></button>
-    <button id="mSkala2"><svg class="ik" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg><span>Kecepatan waktu</span></button>
-    <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Nolkan waktu &amp; muatan</span></button>
+    <div class="kan" style="padding:6px 10px;gap:8px">
+      <svg class="ik" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>
+      <span class="cap">kecepatan</span>
+      <select id="selSkala" style="flex:1 1 auto;height:38px"></select>
+    </div>
+    <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Reset waktu &amp; muatan</span></button>
     <button id="mPasang" style="display:none"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 18v2h16v-2"/></svg><span>Pasang aplikasi</span></button>
     <button id="mProyektor"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg><span>Mode proyektor</span></button>
-    <button id="mKotak">Tampilkan kotak area klik</button>
+    <button id="mKotak"><svg class="ik" viewBox="0 0 24 24" style="stroke-dasharray:3 2.5"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg><span>Tampilkan kotak area klik</span></button>
     <button id="mPas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Paskan tampilan</button>
     <hr>
     <button id="mContohBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5h7l2 2h7v12H4z"/></svg><span>Contoh rangkaian</span><span style="margin-left:auto">▾</span></button>
@@ -275,7 +309,6 @@
 </div>
 
 <div class="skop" id="skopbar">
-  <button class="skopx" id="bSkopTutup" title="Tutup osiloskop" aria-label="Tutup osiloskop"><svg class="ik" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <canvas id="scope"></canvas>
   <div id="skopctl"></div>
 </div>
@@ -1301,7 +1334,12 @@ function rekam(){
   if(tumpukan.length>50) tumpukan.shift();
   majuStack.length=0; setRiwayat();
 }
-const setRiwayat=()=>{bUndo.disabled=!tumpukan.length;bRedo.disabled=!majuStack.length};
+function setRiwayat(){
+  bUndo.disabled=!tumpukan.length; bRedo.disabled=!majuStack.length;
+  const a=document.getElementById('mUndo2'), b=document.getElementById('mRedo2');
+  if(a) a.disabled=!tumpukan.length;
+  if(b) b.disabled=!majuStack.length;
+}
 bUndo.addEventListener('click',()=>{
   if(!tumpukan.length) return; majuStack.push(potret()); pakai(tumpukan.pop()); setRiwayat();
 });
@@ -1318,12 +1356,33 @@ const gaya=getComputedStyle(document.documentElement), C={};
 ['copper','charge','silk','muted','hot','panel','panel-dark','panel-up','ok','pilih']
   .forEach(n=>C[n]=gaya.getPropertyValue('--'+n).trim());
 let lebarCSS=0,tinggiCSS=0;
+let dprTerpakai=0;
 function ukur(){
   const r=cv.getBoundingClientRect();
   lebarCSS=r.width; tinggiCSS=r.height;
   const dpr=Math.min(devicePixelRatio||1,2.5);
+  dprTerpakai=dpr;
   cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+/* ===== pemeriksaan diri setiap bingkai ====================================
+   Kalau ukuran kanvas yang tercatat tidak lagi cocok dengan kotak CSS-nya
+   atau dengan devicePixelRatio, gambar akan menyusut ke sudut dan
+   meninggalkan coretan saat digeser — karena pengisian latar hanya menutupi
+   sebagian bitmap. Ini pernah terjadi setelah aplikasi berpindah ke latar
+   belakang di Android, dan pemicunya tidak selalu memicu ResizeObserver.
+   Daripada menebak pemicunya, putaran gambar memeriksa sendiri: murah,
+   dan menutup SEMUA pemicu sekaligus. */
+function periksaUkuran(){
+  const w=cv.clientWidth, h=cv.clientHeight;
+  if(!w||!h) return false;
+  const dpr=Math.min(devicePixelRatio||1,2.5);
+  const cocok = Math.abs(w-lebarCSS)<1 && Math.abs(h-tinggiCSS)<1 &&
+                Math.abs(dpr-dprTerpakai)<1e-6 &&
+                Math.abs(cv.width-Math.round(w*dpr))<=1 &&
+                Math.abs(cv.height-Math.round(h*dpr))<=1;
+  if(!cocok){ ukur(); return true }
+  return false;
 }
 const keDunia=(sx,sy)=>[sx/zoom+pan.x, sy/zoom+pan.y];
 
@@ -1791,6 +1850,7 @@ function genggamKawat(pts){
 }
 
 function gambar(){
+  periksaUkuran();
   labelAntri.length=0;
   ctx.save();
   ctx.fillStyle=C['panel-dark'];ctx.fillRect(0,0,lebarCSS,tinggiCSS);
@@ -1934,7 +1994,13 @@ const fmtVolt=v=>Math.abs(v)<1?km(v*1000,Math.abs(v*1000)<10?1:0)+' mV'
 const sheet=document.getElementById('sheet'), pegangEl=document.getElementById('pegang');
 const elKet=document.getElementById('ket'), elTanda=document.getElementById('tanda');
 const elIns=document.getElementById('sIns');
-const bukaSheet=b=>{sheet.classList.toggle('buka',b);elTanda.textContent=b?'▼':'▲'};
+const bukaSheet=b=>{
+  sheet.classList.toggle('buka',b);
+  elTanda.textContent=b?'▼':'▲';
+  /* Layar skop dan panel detail bersaing memakan tinggi layar; di HP
+     keduanya terbuka sekaligus tidak menyisakan ruang untuk skema. */
+  if(b) bukaScope(false);
+};
 pegangEl.addEventListener('click',()=>bukaSheet(!sheet.classList.contains('buka')));
 /* Memilih TIDAK membuka panel. Panel hanya terbuka oleh ketukan ganda
    atau oleh tombol panah di batang pegangan. */
@@ -2170,12 +2236,20 @@ function gambarUkur(){
 const sc=document.getElementById('scope'), sctx=sc.getContext('2d');
 const skopbar=document.getElementById('skopbar');
 const bSkop=document.getElementById('bSkop');
+const IK_SKOP='<svg class="ik" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M5.5 14c2-6 4 6 6 0s3-4 4 2"/></svg>';
+const IK_TUTUP='<svg class="ik" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function bukaScope(b){
   skopbar.classList.toggle('buka',b);
   bSkop.setAttribute('aria-pressed',String(b));
+  /* Tombol SKOP sekaligus menjadi tombol tutup: tanda silang tersendiri di
+     dalam layar skop hanya memakan tempat. */
+  const sv=bSkop.querySelector('svg');
+  if(sv) sv.outerHTML = b?IK_TUTUP:IK_SKOP;
+  const sp=bSkop.querySelector('span');
+  if(sp) sp.textContent = b?'TUTUP':'SKOP';
 }
 bSkop.addEventListener('click',()=>bukaScope(!skopbar.classList.contains('buka')));
-document.getElementById('bSkopTutup').addEventListener('click',()=>bukaScope(false));
+
 let scL=0,scT=0;
 
 /* basis waktu, seperti kenop TIME/DIV. 0 = seluruh rekaman. */
@@ -2323,54 +2397,66 @@ function bangunKendali(daftar){
     +'/'+(picuAktif?'P':'-')+'/'+iJendela;
   if(sig!==sigCtl){
     sigCtl=sig;
-    const bc=(nm,id,kelas,extra)=>'<span class="bc '+(extra||'')+'"><i>'+nm+
-      '</i><b class="'+kelas+'" data-b="'+id+'"></b></span>';
+    const bc=(nm,id,lebar,extra)=>'<span class="bc '+(lebar||'')+' '+(extra||'')+
+      '"><i>'+nm+'</i><b data-b="'+id+'"></b></span>';
     let html='';
     daftar.forEach(k=>{
       const st=setelanKanal.get(k.id);
+      const satPP=(k.sat==='A'?'Ip-p':'Vp-p');
       html+='<div class="kanBlok" style="border-left-color:'+k.warna+'">'+
         '<div class="kan">'+
           '<span class="kanNama" style="color:'+k.warna+'">'+k.nama+'</span>'+
-          '<span class="grp2">'+
-            '<button data-id="'+k.id+'" data-aksi="vminus" title="Perkecil volt/div">−</button>'+
-            '<span class="vd">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
-            '<button data-id="'+k.id+'" data-aksi="vplus" title="Perbesar volt/div">+</button>'+
+          '<span class="cap">'+(k.sat==='A'?'A/div':'V/div')+'</span>'+
+          '<span class="grp">'+
+            '<button data-id="'+k.id+'" data-aksi="vminus" title="Perkecil skala tegak">−</button>'+
+            '<span class="val">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
+            '<button data-id="'+k.id+'" data-aksi="vplus" title="Perbesar skala tegak">+</button>'+
           '</span>'+
-          '<span class="grp2">'+
+          '<span class="cap">posisi</span>'+
+          '<span class="grp">'+
             '<button data-id="'+k.id+'" data-aksi="turun" data-tahan="1" title="Turunkan sinyal — bisa ditahan">▼</button>'+
             '<button data-id="'+k.id+'" data-aksi="naik" data-tahan="1" title="Naikkan sinyal — bisa ditahan">▲</button>'+
           '</span>'+
-          '<button data-id="'+k.id+'" data-aksi="ac" title="Kopling DC atau AC"'+
-            (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button>'+
+          '<span class="cap">kopling</span>'+
+          '<span class="grp"><button data-id="'+k.id+'" data-aksi="ac" '+
+            'title="DC menampilkan tumpuan searahnya, AC membuangnya"'+
+            (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button></span>'+
         '</div>'+
         '<div class="kan">'+
-          bc('pp','pp'+k.id,'w1')+
+          bc(satPP,'pp'+k.id)+
           bc('T','T'+k.id,'w2')+
           bc('f','f'+k.id,'w2')+
-          bc('kini','kn'+k.id,'w1','lebar-saja')+
+          bc('kini','kn'+k.id,'','lebar-saja')+
           bc('τ','tau'+k.id,'w2','lebar-saja')+
           '<span class="ket lebar-saja" data-ket="'+k.id+'"></span>'+
         '</div>'+
         '</div>';
     });
     html+='<div class="kan kanGlob">'+
-          '<span class="grp2">'+
+          '<span class="cap">time/div</span>'+
+          '<span class="grp">'+
             '<button data-aksi="tkurang" title="Perlambat sapuan">◀</button>'+
-            '<span class="vd">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X)+'/div')+'</span>'+
+            '<span class="val">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X))+'</span>'+
             '<button data-aksi="ttambah" title="Percepat sapuan">▶</button>'+
           '</span>'+
-          '<span class="grp2">'+
-            '<button data-aksi="pkiri" data-tahan="1" title="Geser ke belakang — bisa ditahan">◀</button>'+
-            '<button data-aksi="pkanan" data-tahan="1" title="Geser ke depan — bisa ditahan">▶</button>'+
-            '<button data-aksi="pnol" title="Kembali ke terkini">0</button>'+
+          '<span class="cap">geser waktu</span>'+
+          '<span class="grp">'+
+            '<button data-aksi="pkiri" data-tahan="1" title="Ke belakang — bisa ditahan">◀</button>'+
+            '<span class="val" data-b="posT"></span>'+
+            '<button data-aksi="pkanan" data-tahan="1" title="Ke depan — bisa ditahan">▶</button>'+
+            '<button data-aksi="pnol" title="Kembali ke sinyal terkini">NOL</button>'+
           '</span>'+
-          bc('pos','posT','w2')+
-          '<button data-aksi="auto" title="Atur ulang skala &amp; posisi otomatis">AUTO</button>'+
-          '<button data-aksi="picu" title="Picu membuat sinyal berkala berdiri diam"'+
-          (picuAktif?' aria-pressed="true"':'')+'>PICU</button>'+
           '</div>';
-    html+='<div class="kan"><span class="ket lebar-saja">kisi '+NDIV_Y+
-          ' divisi · segitiga kiri = titik nol · AC membuang tumpuan DC</span></div>';
+    html+='<div class="kan">'+
+          '<span class="cap">setelan</span>'+
+          '<span class="grp">'+
+            '<button data-aksi="auto" title="Atur ulang skala &amp; posisi semua kanal">AUTO</button>'+
+            '<button data-aksi="picu" title="Picu membuat sinyal berkala berdiri diam"'+
+            (picuAktif?' aria-pressed="true"':'')+'>PICU '+(picuAktif?'ON':'OFF')+'</button>'+
+          '</span>'+
+          '<span class="ket lebar-saja">kisi '+NDIV_Y+
+          ' divisi · segitiga kiri = titik nol · AC membuang tumpuan DC</span>'+
+          '</div>';
     elCtl.innerHTML=html;
     elCtl.querySelectorAll('button[data-tahan]').forEach(b=>{
       const id=b.dataset.id, aksi=b.dataset.aksi;
@@ -2402,7 +2488,7 @@ function bangunKendali(daftar){
       if(el.textContent!==t2) el.textContent=t2;
     }
   });
-  isi('posT',posDivT?km(posDivT,2)+' div':'0');
+  isi('posT',posDivT?km(posDivT,2)+' d':'0');
 }
 
 function gambarScope(){
@@ -2858,6 +2944,8 @@ document.getElementById('bReset').addEventListener('click',resetWaktu);
 const bSkala=document.getElementById('bSkala');
 function labelSkala(){
   bSkala.textContent=km(SKALA[iSkala],SKALA[iSkala]<1?2:0).replace(',00','')+'×';
+  const sel=document.getElementById('selSkala');
+  if(sel && sel.value!==String(iSkala)) sel.value=String(iSkala);
 }
 bSkala.addEventListener('click',()=>{iSkala=(iSkala+1)%SKALA.length;labelSkala()});
 labelSkala();
@@ -2891,9 +2979,29 @@ document.getElementById('mContohBuka').addEventListener('click',e=>{
 });
 const tutupMenu=f=>()=>{menu.classList.remove('buka');f()};
 document.getElementById('mJeda2').addEventListener('click',tutupMenu(()=>bJeda.click()));
-document.getElementById('mUndo2').addEventListener('click',tutupMenu(()=>bUndo.click()));
-document.getElementById('mRedo2').addEventListener('click',tutupMenu(()=>bRedo.click()));
-document.getElementById('mSkala2').addEventListener('click',tutupMenu(()=>bSkala.click()));
+/* Jangan disalurkan lewat .click() pada tombol yang bisa dinonaktifkan —
+   mengklik tombol nonaktif secara program tidak melakukan apa pun, sehingga
+   butir menunya tampak rusak. Panggil logikanya langsung, dan cerminkan
+   keadaan aktif/nonaktifnya pada butir menunya. */
+const mUndo2=document.getElementById('mUndo2'), mRedo2=document.getElementById('mRedo2');
+mUndo2.addEventListener('click',tutupMenu(()=>{
+  if(!tumpukan.length) return;
+  majuStack.push(potret()); pakai(tumpukan.pop()); setRiwayat();
+}));
+mRedo2.addEventListener('click',tutupMenu(()=>{
+  if(!majuStack.length) return;
+  tumpukan.push(potret()); pakai(majuStack.pop()); setRiwayat();
+}));
+/* daftar pilih kecepatan: nilainya terlihat, dan berganti tanpa memutar
+   melewati semua pilihan */
+const selSkala=document.getElementById('selSkala');
+SKALA.forEach((v,i)=>{
+  const o=document.createElement('option');
+  o.value=i; o.textContent=km(v,v<1?2:0).replace(',00','')+'×';
+  selSkala.appendChild(o);
+});
+function segarkanSkala(){ selSkala.value=String(iSkala); labelSkala() }
+selSkala.addEventListener('change',()=>{ iSkala=+selSkala.value; labelSkala() });
 document.getElementById('mReset2').addEventListener('click',tutupMenu(resetWaktu));
 const bTampil=document.getElementById('bTampil');
 function setModeTampil(m){
@@ -2987,7 +3095,7 @@ document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
   const led=tambahKomponen('led',700,60);
   const g  =tambahKomponen('massa',380,440);
   [[vin.id+':0',sw.id+':0'],[sw.id+':1',rb.id+':0'],[rb.id+':1',q.id+':0'],
-   [vcc.id+':0',led.id+':0'],[led.id+':1',rl.id+':1'],[rl.id+':0',q.id+':1'],
+   [vcc.id+':0',led.id+':1'],[led.id+':0',rl.id+':1'],[rl.id+':0',q.id+':1'],
    [q.id+':2',g.id+':0'],[vin.id+':1',g.id+':0'],[vcc.id+':1',g.id+':0']]
     .forEach(([a,b])=>sambung(a,b));
   hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
@@ -3355,6 +3463,9 @@ if(iOS && !terpasang && /^https?:$/.test(location.protocol)){
 }
 
 addEventListener('resize',()=>ukur());
+addEventListener('orientationchange',()=>setTimeout(ukur,120));
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) ukur() });
+if(window.visualViewport) visualViewport.addEventListener('resize',()=>ukur());
 /* Tata letak bisa berubah tanpa memicu event resize — misalnya saat panel
    bawah mengembang. Tanpa ini, bitmap kanvas diperas CSS dan gambar bergeser
    dari posisi uji sentuhnya. */
