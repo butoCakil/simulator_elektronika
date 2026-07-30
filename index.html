@@ -172,9 +172,32 @@
   .kan .bc b.w2{min-width:80px}
   body.proyektor .kan .bc b.w1{min-width:92px}
   body.proyektor .kan .bc b.w2{min-width:100px}
-  /* kenop geser: satu untuk waktu, satu untuk tiap kanal */
-  .kan input[type=range]{width:132px;height:22px;margin:0;flex:none}
-  body.proyektor .kan input[type=range]{width:170px;height:28px}
+  /* Blok kanal: garis tebal berwarna di tepi kiri sebagai pemisah tegas
+     antara kanal 1 dan kanal 2. */
+  .kanBlok{border-left:3px solid var(--rule);padding-left:9px;margin-bottom:7px}
+  .kanBlok+.kanBlok{padding-top:7px;border-top:1px solid var(--rule)}
+  .kanNama{font-size:12px;letter-spacing:.06em;min-width:30px;color:var(--silk)}
+  .kanGlob{border-top:1px solid var(--rule);padding-top:8px;margin-top:2px}
+  /* Ruang kendali bertinggi tetap: layar skop tidak bergeser saat kanal
+     muncul atau hilang — seperti osiloskop yang layarnya memang tidak pindah. */
+  #skopctl{min-height:126px}
+  body.proyektor #skopctl{min-height:150px}
+
+  /* ---- pemadatan untuk layar sempit (HP) ---- */
+  @media(max-width:600px){
+    .bar{gap:5px;padding:6px}
+    /* hanya yang sering dipakai saat mengajar tinggal di bilah; sisanya
+       pindah ke menu ⋯ yang sudah bisa digulir */
+    #bJeda,#bUndo,#bRedo,#bPas,#bSkala,#bTampil,#bReset{display:none}
+    .lebar-saja{display:none !important}
+    #skopctl{min-height:0}
+    .kan{gap:5px;font-size:11px}
+    .kan .nm{min-width:0}
+    .kan .vd{min-width:66px}
+    .kan .bc b.w1,.kan .bc b.w2{min-width:58px}
+    .kan button{min-width:30px;padding:0 6px}
+    #scope{height:190px}
+  }
   .skoptb{position:absolute;top:6px;right:52px;z-index:6;height:36px;padding:0 12px;
     font-size:11px;border-radius:18px;border-color:var(--rule);color:var(--silk);
     background:rgba(14,37,41,.92)}
@@ -211,16 +234,21 @@
   <button id="bJeda" aria-pressed="false" title="Bekukan waktu simulasi"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg><span>Jeda</span></button>
   <button class="tambah" id="bTambah"><svg class="ik" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tambah</span></button>
   <span class="tumbuh"></span>
+  <button class="ikon" id="bReset" title="Nolkan waktu &amp; muatan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></button>
+  <button id="bTampil" title="Apa yang ditampilkan di kanvas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Bersih</span></button>
+  <button class="ikon" id="bPas" title="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button id="bSkop" aria-pressed="false" title="Layar osiloskop"><svg class="ik" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M5.5 14c2-6 4 6 6 0s3-4 4 2"/></svg><span>Skop</span></button>
+  <button id="bSkala" title="Kecepatan waktu">0,2×</button>
   <button class="ikon" id="bUndo" title="Urungkan" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg></button>
   <button class="ikon" id="bRedo" title="Ulangi" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg></button>
-  <button class="ikon" id="bPas" title="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-  <button id="bSkala" title="Kecepatan waktu">0,2×</button>
-  <button id="bTampil" title="Apa yang ditampilkan di kanvas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Bersih</span></button>
-  <button class="ikon" id="bReset" title="Nolkan waktu &amp; muatan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></button>
   <button class="ikon" id="bMenu" title="Lainnya"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:4.6"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg></button>
   <div class="menu" id="menu">
     <button id="mLabel"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg>Label tegangan &amp; arus</button>
+    <button id="mJeda2"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg><span>Jeda / Lanjut</span></button>
+    <button id="mUndo2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg><span>Urungkan</span></button>
+    <button id="mRedo2"><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg><span>Ulangi</span></button>
+    <button id="mSkala2"><svg class="ik" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg><span>Kecepatan waktu</span></button>
+    <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Nolkan waktu &amp; muatan</span></button>
     <button id="mPasang" style="display:none"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 18v2h16v-2"/></svg><span>Pasang aplikasi</span></button>
     <button id="mProyektor"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg><span>Mode proyektor</span></button>
     <button id="mKotak">Tampilkan kotak area klik</button>
@@ -953,7 +981,7 @@ let nomorBerikut=1, hidup=false;
 let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 /* satu penanda untuk dua pilihan tampilan: bit 1 = nilai, bit 2 = kotak klik */
 let modeTampil=1;
-const MODE_NAMA=['0','VAL','BOX','ALL'];
+const MODE_NAMA=['Bersih','Nilai','Kotak','Nilai+Kotak'];
 const APLIKASI='SASMITA';
 const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
@@ -2237,8 +2265,7 @@ elCtl.addEventListener('click',e=>{
   if(aksi==='picu'){ picuAktif=!picuAktif; sigCtl=''; return }
   if(aksi==='tkurang'){ iJendela=Math.min(iJendela+1,JENDELA.length-1); sigCtl=''; return }
   if(aksi==='ttambah'){ iJendela=Math.max(iJendela-1,0); sigCtl=''; return }
-  if(aksi==='pkiri'){  posDivT=Math.min(posDivT+LANGKAH_HALUS,GESER_MAKS); return }
-  if(aksi==='pkanan'){ posDivT=Math.max(posDivT-LANGKAH_HALUS,0); return }
+  /* pkiri/pkanan dan naik/turun ditangani oleh tekan-tahan, bukan klik */
   if(aksi==='pnol'){   posDivT=0; return }
   const st=setelanKanal.get(id); if(!st) return;
   const k=daftarTerakhir.find(x=>x.id===id);
@@ -2260,8 +2287,6 @@ elCtl.addEventListener('click',e=>{
     if(dLama>set)  st.pos-=dLama-set;
     if(dLama<-set) st.pos+=-set-dLama;
   }
-  if(aksi==='naik')   st.pos+=LANGKAH_HALUS;
-  if(aksi==='turun')  st.pos-=LANGKAH_HALUS;
   sigCtl='';
 });
 let daftarTerakhir=[], picuAktif=true;
@@ -2269,103 +2294,115 @@ let daftarTerakhir=[], picuAktif=true;
    Nilai bacaan sengaja tidak disertakan: kalau ikut, DOM dibangun ulang tiap
    bingkai dan tombolnya lenyap di antara tekan dan lepas — itu sebabnya
    tombol volt/div tidak bisa diklik. */
+/* ===== tekan-tahan yang mempercepat sendiri ===============================
+   Dengan langkah 0,01 divisi, memindahkan sinyal 4 divisi butuh 400 ketukan.
+   Karena peluncur dihapus, tombol panah HARUS bisa ditahan: ketukan tunggal
+   memberi langkah terhalus, tahanan melaju dan makin cepat.
+   ========================================================================= */
+function pasangTahan(el,fn){
+  let jam=null, tunda=null, n=0;
+  const berhenti=()=>{ clearTimeout(tunda); clearInterval(jam); jam=tunda=null; n=0 };
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault(); berhenti();
+    fn(1);                                  /* ketukan tunggal = langkah terhalus */
+    tunda=setTimeout(()=>{
+      jam=setInterval(()=>{ n++; fn(n<12?1:(n<30?5:25)) },45);
+    },330);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(nm=>
+    el.addEventListener(nm,berhenti));
+}
+
+const MAKS_KANAL=2;      /* seperti osiloskop analog dua kanal */
+
 function bangunKendali(daftar){
-  /* Tanda tangan HANYA memuat hal yang mengubah SUSUNAN. Nilai bacaan dan
-     kedudukan kenop sengaja tidak ikut: kalau ikut, DOM dibangun ulang tiap
-     bingkai dan kenopnya lepas dari jari saat sedang digeser. */
+  /* Tanda tangan HANYA memuat hal yang mengubah SUSUNAN, agar DOM tidak
+     dibangun ulang tiap bingkai dan tombol tidak lepas dari jari. */
   const sig=daftar.map(k=>{const s=setelanKanal.get(k.id);
-    return k.id+'/'+k.nama+'/'+s.iv+'/'+(s.auto?'a':'m')+'/'+(s.ac?'ac':'dc')}).join('|')
+    return k.id+'/'+k.nama+'/'+s.iv+'/'+(s.ac?'ac':'dc')}).join('|')
     +'/'+(picuAktif?'P':'-')+'/'+iJendela;
   if(sig!==sigCtl){
     sigCtl=sig;
-    const bc=(nm,id,kelas)=>'<span class="bc"><i>'+nm+'</i><b class="'+kelas+
-      '" data-b="'+id+'"></b></span>';
+    const bc=(nm,id,kelas,extra)=>'<span class="bc '+(extra||'')+'"><i>'+nm+
+      '</i><b class="'+kelas+'" data-b="'+id+'"></b></span>';
     let html='';
     daftar.forEach(k=>{
       const st=setelanKanal.get(k.id);
-      html+='<div class="kan">'+
-        '<i style="background:'+k.warna+'"></i>'+
-        '<span class="nm">'+k.nama+'</span>'+
-        '<span class="grp2">'+
-          '<button data-id="'+k.id+'" data-aksi="vminus" title="Perkecil volt/div">−</button>'+
-          '<span class="vd">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
-          '<button data-id="'+k.id+'" data-aksi="vplus" title="Perbesar volt/div">+</button>'+
-        '</span>'+
-        /* kenop kedudukan tegak: halus seperti potensiometer */
-        '<input type="range" data-pos="'+k.id+'" min="-4" max="4" step="'+LANGKAH_HALUS+'" '+
-          'title="Geser sinyal ke atas atau ke bawah">'+
-        '<span class="grp2">'+
-          '<button data-id="'+k.id+'" data-aksi="turun" title="Turun 0,1 divisi">▼</button>'+
-          '<button data-id="'+k.id+'" data-aksi="naik" title="Naik 0,1 divisi">▲</button>'+
-        '</span>'+
-        '<button data-id="'+k.id+'" data-aksi="ac" title="Kopling: DC menampilkan tumpuan searahnya, AC membuangnya"'+
-          (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button>'+
-        bc('pp','pp'+k.id,'w1')+bc('kini','kn'+k.id,'w1')+
-        bc('T','T'+k.id,'w2')+bc('f','f'+k.id,'w2')+bc('τ','tau'+k.id,'w2')+
-        '<span class="ket" data-ket="'+k.id+'"></span>'+
+      html+='<div class="kanBlok" style="border-left-color:'+k.warna+'">'+
+        '<div class="kan">'+
+          '<span class="kanNama" style="color:'+k.warna+'">'+k.nama+'</span>'+
+          '<span class="grp2">'+
+            '<button data-id="'+k.id+'" data-aksi="vminus" title="Perkecil volt/div">−</button>'+
+            '<span class="vd">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
+            '<button data-id="'+k.id+'" data-aksi="vplus" title="Perbesar volt/div">+</button>'+
+          '</span>'+
+          '<span class="grp2">'+
+            '<button data-id="'+k.id+'" data-aksi="turun" data-tahan="1" title="Turunkan sinyal — bisa ditahan">▼</button>'+
+            '<button data-id="'+k.id+'" data-aksi="naik" data-tahan="1" title="Naikkan sinyal — bisa ditahan">▲</button>'+
+          '</span>'+
+          '<button data-id="'+k.id+'" data-aksi="ac" title="Kopling DC atau AC"'+
+            (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button>'+
+        '</div>'+
+        '<div class="kan">'+
+          bc('pp','pp'+k.id,'w1')+
+          bc('T','T'+k.id,'w2')+
+          bc('f','f'+k.id,'w2')+
+          bc('kini','kn'+k.id,'w1','lebar-saja')+
+          bc('τ','tau'+k.id,'w2','lebar-saja')+
+          '<span class="ket lebar-saja" data-ket="'+k.id+'"></span>'+
+        '</div>'+
         '</div>';
     });
-    html+='<div class="kan"><span class="nm">Waktu</span>'+
+    html+='<div class="kan kanGlob">'+
           '<span class="grp2">'+
             '<button data-aksi="tkurang" title="Perlambat sapuan">◀</button>'+
             '<span class="vd">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X)+'/div')+'</span>'+
             '<button data-aksi="ttambah" title="Percepat sapuan">▶</button>'+
           '</span>'+
-          '<span class="nm">Geser</span>'+
-          '<input type="range" data-geser="t" min="0" max="'+GESER_MAKS+'" step="'+LANGKAH_HALUS+'" '+
-            'title="Geser sinyal ke kiri atau ke kanan, halus">'+
           '<span class="grp2">'+
-            '<button data-aksi="pkiri" title="Ke belakang 0,1 divisi">◀</button>'+
-            '<button data-aksi="pkanan" title="Ke depan 0,1 divisi">▶</button>'+
+            '<button data-aksi="pkiri" data-tahan="1" title="Geser ke belakang — bisa ditahan">◀</button>'+
+            '<button data-aksi="pkanan" data-tahan="1" title="Geser ke depan — bisa ditahan">▶</button>'+
             '<button data-aksi="pnol" title="Kembali ke terkini">0</button>'+
           '</span>'+
-          bc('posisi','posT','w2')+
-          '</div>';
-    html+='<div class="kan"><button data-aksi="auto" title="Kembalikan skala &amp; posisi otomatis">Auto skala</button>'+
+          bc('pos','posT','w2')+
+          '<button data-aksi="auto" title="Atur ulang skala &amp; posisi otomatis">AUTO</button>'+
           '<button data-aksi="picu" title="Picu membuat sinyal berkala berdiri diam"'+
-          (picuAktif?' aria-pressed="true"':'')+'>Picu '+(picuAktif?'aktif':'bebas')+'</button>'+
-          '<span class="ket">kisi '+NDIV_Y+' divisi · segitiga kiri = titik nol · AC membuang tumpuan DC</span></div>';
+          (picuAktif?' aria-pressed="true"':'')+'>PICU</button>'+
+          '</div>';
+    html+='<div class="kan"><span class="ket lebar-saja">kisi '+NDIV_Y+
+          ' divisi · segitiga kiri = titik nol · AC membuang tumpuan DC</span></div>';
     elCtl.innerHTML=html;
-    /* kenop menulis langsung ke keadaan; tidak ada penyusunan ulang DOM */
-    elCtl.querySelectorAll('input[data-pos]').forEach(sl=>{
-      sl.addEventListener('input',()=>{
-        const st=setelanKanal.get(sl.dataset.pos);
-        if(st){ st.auto=false; st.pos=parseFloat(sl.value) }
+    elCtl.querySelectorAll('button[data-tahan]').forEach(b=>{
+      const id=b.dataset.id, aksi=b.dataset.aksi;
+      pasangTahan(b,kali=>{
+        const d=LANGKAH_HALUS*kali;
+        if(aksi==='pkiri'){  posDivT=Math.min(posDivT+d,GESER_MAKS); return }
+        if(aksi==='pkanan'){ posDivT=Math.max(posDivT-d,0); return }
+        const st=setelanKanal.get(id); if(!st) return;
+        st.auto=false;
+        st.pos += (aksi==='naik' ? d : -d);
       });
     });
-    const slT=elCtl.querySelector('input[data-geser="t"]');
-    if(slT) slT.addEventListener('input',()=>{posDivT=parseFloat(slT.value)});
   }
-  /* nilai bacaan dan kedudukan kenop diperbarui tanpa menyentuh susunan */
+  /* nilai bacaan diperbarui tanpa menyentuh susunan */
   const isi=(id,teks)=>{
     const el=elCtl.querySelector('[data-b="'+id+'"]');
     if(el && el.textContent!==teks) el.textContent=teks;
   };
   daftar.forEach(k=>{
-    const st=setelanKanal.get(k.id);
     const tau=ukurTau(k), T=ukurPerioda(k);
     isi('pp'+k.id,fmtNilai(k.maks-k.min,k.sat));
     isi('kn'+k.id,fmtNilai(k.kini,k.sat));
-    isi('T'+k.id,T?fmtWaktu(T):'DC');
+    isi('T'+k.id,T?fmtWaktu(T):'—');
     isi('f'+k.id,T?fmtHz(1/T):'—');
     isi('tau'+k.id,tau?fmtWaktu(tau):'—');
     const el=elCtl.querySelector('[data-ket="'+k.id+'"]');
     if(el){
-      const t2=(k.halus?'':'pita = selubung')+(st.auto?'':(k.halus?'manual':' · manual'));
+      const t2=k.halus?'':'pita = selubung';
       if(el.textContent!==t2) el.textContent=t2;
     }
-    const sl=elCtl.querySelector('input[data-pos="'+k.id+'"]');
-    if(sl && document.activeElement!==sl){
-      const v=Math.max(-4,Math.min(4,st.pos)).toFixed(2);
-      if(sl.value!==v) sl.value=v;
-    }
   });
-  isi('posT',posDivT?km(posDivT,3)+' div':'terkini');
-  const slT=elCtl.querySelector('input[data-geser="t"]');
-  if(slT && document.activeElement!==slT){
-    const v=posDivT.toFixed(2);
-    if(slT.value!==v) slT.value=v;
-  }
+  isi('posT',posDivT?km(posDivT,2)+' div':'0');
 }
 
 function gambarScope(){
@@ -2427,7 +2464,17 @@ function gambarScope(){
   const tSelesai = lebar===Infinity ? tAkhir : tMulai+lebar;
   const rentangT=Math.max(tSelesai-tMulai,1e-9);
 
-  const daftar=mentah.map(([id,j],i)=>{
+  /* Dua kanal saja, seperti osiloskop analog dua kanal. Alat ukur yang
+     sedang dipilih selalu ikut ditampilkan, sehingga mengetuk probe ketiga
+     langsung menggantikan kanal kedua alih-alih tidak terlihat sama sekali. */
+  let urut=mentah.slice();
+  if(dipilih && jejak.has(dipilih.id)){
+    const idx=urut.findIndex(([id])=>id===dipilih.id);
+    if(idx>=MAKS_KANAL){ const ini=urut.splice(idx,1)[0]; urut.splice(1,0,ini) }
+  }
+  const lebihan=Math.max(0,urut.length-MAKS_KANAL);
+  urut=urut.slice(0,MAKS_KANAL);
+  const daftar=urut.map(([id,j],i)=>{
     /* pakai penyangga halus bila ia mencakup seluruh jendela; kalau tidak,
        pakai yang kasar beserta selubungnya */
     /* pakai halus bila ia mencakup jendelanya, ATAU bila ia tidak dimulai
@@ -2542,6 +2589,13 @@ function gambarScope(){
     sctx.lineTo(xp+4,yAtas-5);sctx.closePath();sctx.fill();
   }
 
+  if(lebihan){
+    sctx.fillStyle=C.muted; sctx.font=(9.5*FP())+'px ui-monospace, monospace';
+    sctx.textAlign='right'; sctx.textBaseline='top';
+    sctx.fillText('+'+lebihan+' alat lain — ketuk alatnya untuk menampilkan',
+      scL-kanan,yAtas+2);
+    sctx.textBaseline='middle';
+  }
   bangunKendali(daftar);
 }
 
@@ -2836,6 +2890,11 @@ document.getElementById('mContohBuka').addEventListener('click',e=>{
   document.getElementById('subContoh').classList.toggle('buka');
 });
 const tutupMenu=f=>()=>{menu.classList.remove('buka');f()};
+document.getElementById('mJeda2').addEventListener('click',tutupMenu(()=>bJeda.click()));
+document.getElementById('mUndo2').addEventListener('click',tutupMenu(()=>bUndo.click()));
+document.getElementById('mRedo2').addEventListener('click',tutupMenu(()=>bRedo.click()));
+document.getElementById('mSkala2').addEventListener('click',tutupMenu(()=>bSkala.click()));
+document.getElementById('mReset2').addEventListener('click',tutupMenu(resetWaktu));
 const bTampil=document.getElementById('bTampil');
 function setModeTampil(m){
   modeTampil=m&3;
