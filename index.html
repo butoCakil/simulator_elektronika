@@ -212,11 +212,11 @@
   <button class="tambah" id="bTambah"><svg class="ik" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tambah</span></button>
   <span class="tumbuh"></span>
   <button class="ikon" id="bReset" title="Nolkan waktu &amp; muatan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></button>
-  <button id="bTampil" title="Apa yang ditampilkan di kanvas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Bersih</span></button>
   <button class="ikon" id="bPas" title="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button id="bSkop" aria-pressed="false" title="Layar osiloskop"><svg class="ik" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M5.5 14c2-6 4 6 6 0s3-4 4 2"/></svg><span>Skop</span></button>
   <button id="bSkala" title="Kecepatan waktu">0,2×</button>
   <button class="ikon" id="bUndo" title="Urungkan" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg></button>
+  <button id="bTampil" title="Apa yang ditampilkan di kanvas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Bersih</span></button>
   <button class="ikon" id="bRedo" title="Ulangi" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg></button>
   <button class="ikon" id="bMenu" title="Lainnya"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:4.6"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg></button>
   <div class="menu" id="menu">
@@ -953,7 +953,7 @@ let nomorBerikut=1, hidup=false;
 let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 /* satu penanda untuk dua pilihan tampilan: bit 1 = nilai, bit 2 = kotak klik */
 let modeTampil=1;
-const MODE_NAMA=['Bersih','Nilai','Kotak','Nilai+Kotak'];
+const MODE_NAMA=['0','VAL','BOX','ALL'];
 const APLIKASI='SASMITA';
 const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
@@ -2928,7 +2928,7 @@ document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
   const led=tambahKomponen('led',700,60);
   const g  =tambahKomponen('massa',380,440);
   [[vin.id+':0',sw.id+':0'],[sw.id+':1',rb.id+':0'],[rb.id+':1',q.id+':0'],
-   [vcc.id+':0',led.id+':1'],[led.id+':0',rl.id+':1'],[rl.id+':0',q.id+':1'],
+   [vcc.id+':0',led.id+':0'],[led.id+':1',rl.id+':1'],[rl.id+':0',q.id+':1'],
    [q.id+':2',g.id+':0'],[vin.id+':1',g.id+':0'],[vcc.id+':1',g.id+':0']]
     .forEach(([a,b])=>sambung(a,b));
   hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
