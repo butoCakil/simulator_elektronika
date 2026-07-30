@@ -1,0 +1,21 @@
+{
+  "name": "SASMITA — Simulator Skema Interaktif Elektronika",
+  "short_name": "SASMITA",
+  "description": "Simulator skema elektronika interaktif untuk pembelajaran: rangkaian DC, transien RC/RL, dioda dan penyearah, transistor, op-amp, lengkap dengan osiloskop. Bekerja tanpa internet.",
+  "lang": "id",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0E2529",
+  "theme_color": "#14343A",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    { "src": "ikon/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

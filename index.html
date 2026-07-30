@@ -1,0 +1,3312 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SASMITA — Simulator Skema Interaktif Elektronika</title>
+<meta name="description" content="SASMITA — simulator skema elektronika interaktif: rangkaian DC, transien, dioda, penyearah, transistor, op-amp, dengan osiloskop. Bekerja tanpa internet.">
+<meta name="theme-color" content="#14343A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="ikon/favicon-64.png">
+<link rel="apple-touch-icon" href="ikon/apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SASMITA">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --panel:#14343A; --panel-dark:#0E2529; --panel-up:#1A4048;
+    --rule:#1F4A50; --silk:#E8E2D0; --muted:#7FA0A3;
+    --copper:#B87333; --charge:#E9B949; --hot:#C4453B; --ok:#63A48C;
+    --pilih:#86B6DE;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:var(--panel-dark);color:var(--silk);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;line-height:1.5;display:flex;flex-direction:column;overscroll-behavior:none}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 8px;
+    background:var(--panel);border-bottom:1px solid var(--rule);flex:none;position:relative}
+  button{font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:.09em;
+    background:transparent;color:var(--silk);border:1px solid var(--rule);border-radius:2px;
+    padding:0 12px;height:40px;cursor:pointer;white-space:nowrap;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  button:disabled{opacity:.35;cursor:default}
+  button[aria-pressed=true]{border-color:var(--pilih);color:var(--pilih);background:rgba(134,182,222,.09)}
+  button:focus-visible{outline:2px solid var(--pilih);outline-offset:2px}
+  .pw[aria-pressed=true]{border-color:var(--ok);color:var(--ok);background:rgba(99,164,140,.1)}
+  .tambah{border-color:var(--pilih);color:var(--pilih)}
+  .ikon{width:42px;padding:0;font-size:17px;letter-spacing:0;text-transform:none}
+  .tumbuh{flex:1 1 auto}
+  /* Lebar dan tinggi menu dibatasi tegas, dan isinya menggulir sendiri.
+     Sebelumnya menu tumbuh mengikuti isi, sehingga membuka submenu contoh
+     langsung menutupi hampir seluruh jendela. */
+  .menu{position:absolute;top:calc(100% + 2px);right:8px;left:auto;z-index:20;
+    background:var(--panel-up);border:1px solid var(--rule);border-radius:3px;padding:6px;
+    width:max-content;min-width:210px;max-width:min(320px,calc(100vw - 16px));
+    max-height:min(66vh,460px);overflow-y:auto;overscroll-behavior:contain;display:none;
+    box-shadow:0 14px 34px rgba(0,0,0,.5)}
+  .menu.buka{display:block}
+  .menu button{width:100%;justify-content:flex-start;border:none;height:42px;padding:0 10px}
+  .menu hr{border:none;border-top:1px solid var(--rule);margin:5px 2px}
+
+  #bidang{flex:1 1 auto;position:relative;min-height:0}
+  /* khusus kanvas skema. JANGAN memakai selektor `canvas`, karena kanvas
+     osiloskop juga akan ikut dilepas dari aliran tata letak. */
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .chip{position:absolute;left:50%;transform:translateX(-50%);top:10px;
+    background:rgba(14,37,41,.95);border:1px solid var(--pilih);border-radius:20px;
+    padding:8px 8px 8px 15px;display:none;align-items:center;gap:9px;font-size:12.5px;
+    color:var(--pilih);max-width:calc(100% - 20px);z-index:10}
+  .chip.tampil{display:flex}
+  .chip button{height:32px;padding:0 11px;font-size:10.5px;border-color:var(--pilih);color:var(--pilih)}
+  .peringatan{position:absolute;left:12px;right:12px;bottom:10px;text-align:center;
+    font-size:12.5px;color:var(--hot);pointer-events:none}
+  .pita{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:11;
+    background:rgba(14,37,41,.96);border:1px solid var(--ok);border-radius:20px;
+    padding:8px 8px 8px 15px;display:none;align-items:center;gap:8px;
+    font-size:12.5px;color:var(--ok);max-width:calc(100% - 20px)}
+  .pita.tampil{display:flex}
+  .pita button{height:32px;padding:0 11px;font-size:10.5px;
+    border-color:var(--ok);color:var(--ok)}
+
+  .sheet{flex:none;background:var(--panel);border-top:1px solid var(--rule);
+    display:flex;flex-direction:column;max-height:52vh}
+  /* Di layar lebar, panel detail menjadi kartu kecil di sudut, bukan pita
+     selebar layar. Kanvas pun mendapat seluruh tinggi yang tersisa. */
+  @media(min-width:760px){
+    .sheet{position:fixed;right:14px;bottom:14px;width:360px;z-index:12;
+      max-height:min(64vh,540px);border:1px solid var(--rule);border-radius:5px;
+      box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  }
+  .pegang{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;flex:none}
+  .pegang .garis{width:34px;height:3px;border-radius:2px;background:var(--rule);flex:none}
+  .pegang .ket{font-size:12px;color:var(--muted);flex:1 1 auto;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .pegang .tanda{color:var(--pilih);font-size:13px}
+  .isi{overflow-y:auto;display:none}
+  .sheet.buka .isi{display:block}
+  .sesi{padding:2px 12px 13px}
+  .sesi+.sesi{border-top:1px solid var(--rule);padding-top:12px}
+  .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.17em;color:var(--muted);margin:0 0 9px}
+  .fld{margin-bottom:13px}
+  .fld .nm{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+    display:block;margin-bottom:5px}
+  input[type=number],input[type=text],select{font:inherit;font-family:ui-monospace,monospace;font-size:15px;
+    background:var(--panel-dark);color:var(--silk);border:1px solid var(--rule);
+    border-radius:2px;padding:0 10px;height:44px;width:100%}
+  input[type=range]{width:100%;accent-color:var(--pilih);height:30px;margin:5px 0 0}
+  .duo{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  .duo .sat{font-family:ui-monospace,monospace;color:var(--muted);font-size:14px}
+  .arah{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:4px}
+  .arah button{width:100%;height:46px;font-size:16px;padding:0;letter-spacing:0}
+  .pinbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+  .pinbar button{height:44px;font-size:11px;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    font-weight:400;text-align:right;padding:0 0 6px;border-bottom:1px solid var(--rule)}
+  th:first-child{text-align:left}
+  td{padding:7px 0;border-bottom:1px solid rgba(31,74,80,.45);text-align:right}
+  td:first-child{text-align:left;color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  .kosong{color:var(--muted);font-size:12.5px;margin:0}
+  /* ikon tombol: SVG sebaris supaya pasti tergambar di semua peramban,
+     bukan huruf khusus yang belum tentu ada di fontnya */
+  .ik{width:1.2em;height:1.2em;flex:none;vertical-align:-.2em;fill:none;
+    stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  /* tombol yang HANYA berisi ikon perlu ikon lebih besar, kalau tidak
+     tombolnya tampak kosong */
+  .ikon .ik{width:1.6em;height:1.6em}
+  .ik.isi{fill:currentColor;stroke:none}
+  .menu button{gap:9px}
+  .menu button .ik{width:1.05em;height:1.05em}
+  .submenu{display:none;padding-left:6px;border-left:1px solid var(--rule);margin:3px 0 3px 8px}
+  .menu button{text-align:left}
+  .menu button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .submenu.buka{display:block}
+
+  /* Mode proyektor: semua tulisan antarmuka dinaikkan, agar terbaca dari
+     baris belakang kelas. */
+  body.proyektor{font-size:17px}
+  body.proyektor button{font-size:13px;height:46px}
+  body.proyektor .ikon{width:50px;font-size:20px}
+  body.proyektor .lbl{font-size:12px}
+  body.proyektor .kosong{font-size:15px}
+  body.proyektor .kan{font-size:14px}
+  body.proyektor .kan button{height:34px;min-width:34px;font-size:14px}
+  body.proyektor .kan .nm{min-width:96px}
+  body.proyektor .kan .vd{min-width:96px}
+  body.proyektor .pegang .ket{font-size:15px}
+  body.proyektor #scope{height:268px}
+  body.proyektor input[type=number],body.proyektor select{font-size:18px;height:52px}
+  body.proyektor table{font-size:15px}
+  body.proyektor th{font-size:12px}
+  /* Osiloskop punya bilahnya sendiri di atas kanvas, terpisah dari panel
+     detail di bawah. Keduanya bisa terbuka bersamaan: ubah nilai di bawah,
+     amati kurvanya di atas. */
+  .skop{position:relative;flex:none;display:none;flex-direction:column;
+    background:var(--panel);border-bottom:1px solid var(--rule);padding:8px 10px 10px}
+  .skop.buka{display:flex}
+  #skopctl{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+  .kan{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+    font-family:ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums}
+  .kan i{display:inline-block;width:16px;height:3px;border-radius:2px;flex:none}
+  .kan .nm{min-width:74px}
+  .kan .grp2{display:flex;gap:0}
+  .kan button{height:26px;min-width:26px;padding:0 7px;font-size:11px;letter-spacing:0;
+    text-transform:none;border-radius:0;margin-left:-1px}
+  .kan .grp2 button:first-child{border-radius:2px 0 0 2px;margin-left:0}
+  .kan .grp2 button:last-child{border-radius:0 2px 2px 0}
+  .kan .vd{min-width:74px;text-align:center;color:var(--pilih)}
+  .kan .ket{color:var(--muted)}
+  /* Bacaan diberi kotak berlebar tetap dan angka bertabulasi, supaya nilai
+     yang berubah-ubah tidak menggeser nilai di sebelahnya. */
+  .kan .bc{display:inline-flex;align-items:baseline;gap:5px}
+  .kan .bc i{font-style:normal;color:var(--muted);font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.1em}
+  .kan .bc b{font-weight:400;text-align:right;font-variant-numeric:tabular-nums;
+    display:inline-block}
+  .kan .bc b.w1{min-width:74px}
+  .kan .bc b.w2{min-width:80px}
+  body.proyektor .kan .bc b.w1{min-width:92px}
+  body.proyektor .kan .bc b.w2{min-width:100px}
+  /* kenop geser: satu untuk waktu, satu untuk tiap kanal */
+  .kan input[type=range]{width:132px;height:22px;margin:0;flex:none}
+  body.proyektor .kan input[type=range]{width:170px;height:28px}
+  .skoptb{position:absolute;top:6px;right:52px;z-index:6;height:36px;padding:0 12px;
+    font-size:11px;border-radius:18px;border-color:var(--rule);color:var(--silk);
+    background:rgba(14,37,41,.92)}
+  /* melayang di atas segalanya di dalam bilah: apa pun yang terjadi pada
+     tata letak, tombol tutup ini tetap terlihat dan bisa ditekan */
+  .skopx{position:absolute;top:6px;right:8px;z-index:6;
+    width:36px;height:36px;padding:0;font-size:19px;line-height:1;letter-spacing:0;
+    border-radius:18px;border-color:var(--pilih);color:var(--pilih);
+    background:rgba(14,37,41,.92)}
+  /* Seluruh isi layar skop digambar DI DALAM kanvas ini — kisi, sumbu,
+     keterangan kanal. Tidak ada elemen bersaudara yang bisa terdorong
+     keluar, jadi tidak ada lagi bagian yang terpotong. */
+  #scope{position:static;width:100%;height:208px;display:block;background:var(--panel-dark);
+    border:1px solid var(--rule);border-radius:2px}
+
+  .tirai{position:fixed;inset:0;background:rgba(6,18,20,.6);z-index:30;display:none}
+  .tirai.buka{display:block}
+  .palet{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--panel);
+    border-top:1px solid var(--rule);border-radius:10px 10px 0 0;padding:14px;
+    transform:translateY(102%);transition:transform .18s ease}
+  .palet.buka{transform:none}
+  .kisi7{display:grid;grid-template-columns:1fr 1fr;gap:7px;
+    max-height:min(70vh,560px);overflow-y:auto}
+  .kisi7 button.pk{height:46px;justify-content:flex-start;gap:9px;padding:0 10px;
+    font-size:12px;text-transform:none;letter-spacing:0;text-align:left}
+  .kisi7 button.pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.proyektor .kisi7 button.pk{height:58px;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <button class="pw" id="bPower" aria-pressed="false"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg><span>Power</span></button>
+  <button id="bJeda" aria-pressed="false" title="Bekukan waktu simulasi"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg><span>Jeda</span></button>
+  <button class="tambah" id="bTambah"><svg class="ik" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tambah</span></button>
+  <span class="tumbuh"></span>
+  <button class="ikon" id="bReset" title="Nolkan waktu &amp; muatan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></button>
+  <button id="bTampil" title="Apa yang ditampilkan di kanvas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Bersih</span></button>
+  <button class="ikon" id="bPas" title="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="bSkop" aria-pressed="false" title="Layar osiloskop"><svg class="ik" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M5.5 14c2-6 4 6 6 0s3-4 4 2"/></svg><span>Skop</span></button>
+  <button id="bSkala" title="Kecepatan waktu">0,2×</button>
+  <button class="ikon" id="bUndo" title="Urungkan" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg></button>
+  <button class="ikon" id="bRedo" title="Ulangi" disabled><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg></button>
+  <button class="ikon" id="bMenu" title="Lainnya"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:4.6"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg></button>
+  <div class="menu" id="menu">
+    <button id="mLabel"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg>Label tegangan &amp; arus</button>
+    <button id="mPasang" style="display:none"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 18v2h16v-2"/></svg><span>Pasang aplikasi</span></button>
+    <button id="mProyektor"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg><span>Mode proyektor</span></button>
+    <button id="mKotak">Tampilkan kotak area klik</button>
+    <button id="mPas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Paskan tampilan</button>
+    <hr>
+    <button id="mContohBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5h7l2 2h7v12H4z"/></svg><span>Contoh rangkaian</span><span style="margin-left:auto">▾</span></button>
+    <div class="submenu" id="subContoh">
+      <button id="mContoh">seri–paralel DC</button>
+      <button id="mContohRC">pengisian RC</button>
+      <button id="mContohLED">LED &amp; pembatas arus</button>
+      <button id="mContohPS">penyearah jembatan + filter</button>
+      <button id="mContohSW">transistor sebagai saklar</button>
+      <button id="mContohCE">penguat emitor bersama</button>
+      <button id="mContohPot">pembagi tegangan potensiometer</button>
+      <button id="mContohTrafo">catu daya trafo → jembatan → filter</button>
+      <button id="mContohOA">op-amp penguat membalik</button>
+    </div>
+    <button id="mBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v3h16v-3"/></svg>Buka berkas…</button>
+    <button id="mSimpan"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg>Simpan berkas</button>
+    <hr>
+    <button id="mBersih" style="color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>Kosongkan papan</button>
+  </div>
+  <input type="file" id="fBuka" accept=".json,application/json" hidden>
+</div>
+
+<div class="skop" id="skopbar">
+  <button class="skopx" id="bSkopTutup" title="Tutup osiloskop" aria-label="Tutup osiloskop"><svg class="ik" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <canvas id="scope"></canvas>
+  <div id="skopctl"></div>
+</div>
+
+<div id="bidang">
+  <canvas id="cv"></canvas>
+  <div class="chip" id="chip">
+    <span id="chipTeks"></span>
+    <button id="chipBatal">Batal</button>
+  </div>
+  <div class="peringatan" id="peringatan"></div>
+  <div class="pita" id="pitaBaru">
+    <span>Versi baru SASMITA tersedia</span>
+    <button id="bMuatUlang">Muat ulang</button>
+    <button id="bTundaBaru">Nanti</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="pegang" id="pegang">
+    <span class="garis"></span>
+    <span class="ket" id="ket">Ketuk komponen untuk memilihnya</span>
+    <span class="tanda" id="tanda">▲</span>
+  </div>
+  <div class="isi">
+    <div class="sesi" id="sIns"></div>
+    <div class="sesi">
+      <p class="lbl">Titik ukur</p>
+      <div id="isiUkur"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tirai" id="tirai"></div>
+<div class="palet" id="paletSheet">
+  <p class="lbl">Tambah komponen</p>
+  <div class="kisi7" id="kisi7"></div>
+</div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   1. MESIN HITUNG — sudah lulus uji terhadap rumus RC/RL analitik
+   (simpangan < 0,2%). Murni angka, tidak menyentuh DOM.
+   Kapasitor dan induktor dimodelkan dengan companion model Euler mundur:
+     Kapasitor : i = (C/h)(v - v_lalu)        -> konduktansi C/h + sumber arus
+     Induktor  : i = i_lalu + (h/L)v          -> konduktansi h/L + sumber arus
+   Euler mundur dipilih karena stabil tanpa syarat: langkah waktu sebesar
+   apa pun tidak akan membuat hasilnya berosilasi liar. Harganya adalah
+   galat orde satu, jadi h dibuat kecil dan disubstep per bingkai.
+   ========================================================================== */
+/* --- penyelesai di tempat: tidak menyalin matriks tiap langkah ----------- */
+function selesaikanDalam(A,z,n){          /* A: Float64Array n*n (baris utama) */
+  for(let k=0;k<n;k++){
+    let p=k, maks=Math.abs(A[k*n+k]);
+    for(let i=k+1;i<n;i++){
+      const v=Math.abs(A[i*n+k]);
+      if(v>maks){maks=v;p=i}
+    }
+    if(maks<1e-15) continue;
+    if(p!==k){
+      for(let j=k;j<n;j++){const t=A[k*n+j];A[k*n+j]=A[p*n+j];A[p*n+j]=t}
+      const t=z[k]; z[k]=z[p]; z[p]=t;
+    }
+    const piv=A[k*n+k];
+    for(let i=k+1;i<n;i++){
+      const f=A[i*n+k]/piv;
+      if(f===0) continue;
+      A[i*n+k]=0;
+      for(let j=k+1;j<n;j++) A[i*n+j]-=f*A[k*n+j];
+      z[i]-=f*z[k];
+    }
+  }
+  for(let i=n-1;i>=0;i--){
+    const d=A[i*n+i];
+    if(Math.abs(d)<1e-15){z[i]=0;continue}
+    let s=z[i];
+    for(let j=i+1;j<n;j++) s-=A[i*n+j]*z[j];
+    z[i]=s/d;
+  }
+  return z;
+}
+
+/* --- penyangga yang dipakai ulang --------------------------------------- */
+let bufA=null, bufZ=null, bufN=-1;
+function siapkanBuf(N){
+  if(N!==bufN){ bufA=new Float64Array(N*N); bufZ=new Float64Array(N); bufN=N }
+  else { bufA.fill(0); bufZ.fill(0) }
+}
+
+/* --- sambungan (sama seperti versi sebelumnya) --------------------------- */
+function bikinNet(M){
+  const induk=new Map();
+  const cari=k=>{ if(!induk.has(k)) induk.set(k,k);
+    let r=k; while(induk.get(r)!==r) r=induk.get(r);
+    let c=k; while(induk.get(c)!==c){const nx=induk.get(c);induk.set(c,r);c=nx}
+    return r; };
+  const gabung=(a,b)=>{const ra=cari(a),rb=cari(b); if(ra!==rb) induk.set(ra,rb)};
+  for(const k of M.komponen) k.pin.forEach((_,i)=>cari(k.id+':'+i));
+  for(const w of M.kawat) gabung(w.a,w.b);
+  let akarMassa=null;
+  for(const k of M.komponen) if(k.jenis==='massa') akarMassa=cari(k.id+':0');
+  const idx=new Map(); let berikut=1;
+  const nomor=k=>{
+    const r=cari(k);
+    if(akarMassa!==null && r===cari(akarMassa)) return 0;
+    if(!idx.has(r)) idx.set(r,berikut++);
+    return idx.get(r);
+  };
+  const petaSimpul=new Map();
+  for(const k of M.komponen) k.pin.forEach((_,i)=>{
+    const key=k.id+':'+i; petaSimpul.set(key,nomor(key));
+  });
+  return {petaSimpul,jumlah:berikut,adaMassa:akarMassa!==null,akar:cari};
+}
+
+/* --- keadaan dinamis: tegangan kapasitor & arus induktor ----------------- */
+const keadaan=new Map();
+let tSim=0;
+function resetKeadaan(){ keadaan.clear(); tSim=0 }
+const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
+
+const FARAD = k=>Math.max(k.prop.C,1e-4)*1e-6;   /* prop.C dalam µF */
+const HENRY = k=>Math.max(k.prop.L,1e-3)*1e-3;   /* prop.L dalam mH */
+const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='induktor'||k.jenis==='trafo');
+
+/* ===== komponen tak-linear =================================================
+   Dioda memakai persamaan Shockley. Karena arusnya eksponensial, satu kali
+   penyelesaian matriks tidak cukup: tiap langkah waktu harus diulang dengan
+   Newton-Raphson sampai tegangan dioda berhenti berubah.
+   ========================================================================= */
+const VT=0.025852;                     /* kT/q pada suhu ruang */
+const DIODA_JENIS={
+  dioda : {Is:2.52e-9, n:1.752, Vz:0,  Ibv:0},      /* mirip 1N4148 */
+  led   : {Is:3.2e-19, n:2.0,   Vz:0,  Ibv:0},      /* Vf sekitar 2 V */
+  zener : {Is:1e-9,    n:1.0,   Vz:5.1,Ibv:1e-6}    /* Vz dari properti */
+};
+/* exp dipotong secara linear di atas 80 supaya tidak meluap menjadi Infinity */
+const EXP_BATAS=60;
+function expAman(x){
+  if(x>EXP_BATAS){ const e=Math.exp(EXP_BATAS); return e*(1+(x-EXP_BATAS)) }
+  return Math.exp(x);
+}
+function arusDioda(p,v){
+  const nvt=p.n*VT;
+  const e=expAman(v/nvt);
+  let I=p.Is*(e-1), g=p.Is*e/nvt;
+  if(p.Ibv>0){                          /* cabang dadal balik untuk zener */
+    const ez=expAman(-(v+p.Vz)/nvt);
+    I-=p.Ibv*(ez-1);
+    g+=p.Ibv*ez/nvt;
+  }
+  return {I,g:g+1e-12};                 /* gmin: menolong konvergensi */
+}
+/* Pembatasan langkah tegangan sambungan p-n. Tanpa ini, satu iterasi bisa
+   melompat ke exp(600) dan Newton-Raphson tidak akan pernah pulih. */
+function batasiPN(vbaru,vlama,nvt,vkritis){
+  if(vbaru>vkritis && Math.abs(vbaru-vlama)>2*nvt){
+    if(vlama>0){
+      const arg=1+(vbaru-vlama)/nvt;
+      vbaru = arg>0 ? vlama+nvt*Math.log(arg) : vkritis;
+    }else if(vbaru>0){
+      vbaru=nvt*Math.log(vbaru/nvt);
+    }
+  }
+  return vbaru;
+}
+/* Zener punya DUA sambungan eksponensial: maju, dan dadal balik pada -Vz.
+   Keduanya harus dibatasi. Membatasi sisi maju saja membuat iterasi pertama
+   melompat ke tegangan balik penuh, lalu cabang dadal menghasilkan
+   konduktansi sebesar 1e38 dan penyelesaian matriksnya hancur. */
+function batasiDioda(d,vbaru){
+  let v=batasiPN(vbaru,d.v,d.nvt,d.vkritis);
+  if(d.p.Ibv>0){
+    const u=batasiPN(-(v+d.p.Vz), -(d.v+d.p.Vz), d.nvt, d.vkritisBD);
+    v=-(u+d.p.Vz);
+  }
+  return v;
+}
+/* ===== transistor bipolar (Ebers-Moll bentuk transport) ==================
+   Tiga kaki, jadi linearisasinya bukan satu konduktansi melainkan matriks
+   Jacobi 3x3. Di sinilah kesalahan paling mudah bersembunyi: rumus arusnya
+   bisa benar tetapi penempelannya ke matriks salah tanda, dan hasilnya
+   tetap "terlihat masuk akal".
+   Kaki: 0 = basis, 1 = kolektor, 2 = emitor.
+   ========================================================================= */
+const TR_JENIS={
+  npn:{Is:1e-14,nf:1,nr:1,bf:100,br:1,sg: 1},
+  pnp:{Is:1e-14,nf:1,nr:1,bf:100,br:1,sg:-1}
+};
+function arusTransistor(p,vbe,vbc){
+  const nvf=p.nf*VT, nvr=p.nr*VT;
+  const ef=expAman(vbe/nvf), er=expAman(vbc/nvr);
+  const Ic=p.Is*((ef-er)-(er-1)/p.br);
+  const Ib=p.Is*((ef-1)/p.bf+(er-1)/p.br);
+  /* turunan terhadap vbe dan vbc */
+  const gcf= p.Is*ef/nvf;
+  const gcr=-p.Is*er/nvr*(1+1/p.br);
+  const gbf= p.Is*ef/(p.bf*nvf);
+  const gbr= p.Is*er/(p.br*nvr);
+  return {Ic,Ib,gcf,gcr,gbf,gbr};
+}
+/* ===== op-amp ==============================================================
+   Keluaran = Vsat * tanh(A * vd / Vsat). Penjenuhan dibuat mulus, bukan
+   dipatok keras, supaya Newton-Raphson punya turunan di mana-mana; patokan
+   keras membuat iterasi berayun di ambang jenuh.
+   Kaki: 0 = masukan +, 1 = masukan -, 2 = keluaran.
+   ========================================================================= */
+const OA_A=1e5;
+function keluaranOA(vd,vsat){
+  const x=OA_A*vd/vsat, th=Math.tanh(x);
+  return {V:vsat*th, dV:OA_A*(1-th*th)};
+}
+const tegOA=new Map();
+const tegTrans=new Map();     /* {vbe,vbc} awal iterasi berikutnya */
+const tegDioda=new Map();              /* tegangan dioda, awal iterasi berikutnya */
+
+/* nilai sumber pada saat t (AC dievaluasi di ujung langkah) */
+function nilaiSumber(x,t){
+  if(x.jenis==='ampere') return 0;
+  if(x.jenis==='ac') return x.ofs + x.Vp*Math.sin(2*Math.PI*x.f*t + x.fase*Math.PI/180);
+  return x.E;
+}
+
+/* Rencana stamping disusun SEKALI per bingkai — topologi tidak berubah di
+   tengah bingkai — lalu tiap substep hanya mengisi angka. */
+function susunRencana(M,net){
+  const sim=k=>net.petaSimpul.get(k);
+  const res=[],src=[],dyn=[],nl=[],tr=[],tf=[],oa=[];
+  /* Beberapa komponen butuh simpul dalam yang tidak punya kaki — mis. titik
+     antara resistansi belitan dan belitan ideal pada trafo. */
+  let jumlahSimpul=net.jumlah;
+  const simpulDalam=()=>jumlahSimpul++;
+  for(const k of M.komponen){
+    const a=sim(k.id+':0'), b=sim(k.id+':1');
+    switch(k.jenis){
+      case 'resistor':  res.push({id:k.id,a,b,g:1/Math.max(k.prop.R,1e-9)}); break;
+      case 'potensio':{
+        /* Potensiometer tidak butuh mesin baru: ia dua resistor yang berbagi
+           simpul penyapu. */
+        const R=Math.max(k.prop.R,1e-9);
+        const kk=Math.min(Math.max(k.prop.pos,0),1);
+        const w=sim(k.id+':1'), u2=sim(k.id+':2');
+        /* pos adalah KEDUDUKAN penyapu diukur dari kaki 1, sesuai letak panah
+           yang digambar. Sebelumnya terbalik: panah di kaki 1 tetapi
+           resistansi ke kaki 1 justru maksimum. */
+        res.push({id:k.id+'#a',a,b:w,g:1/Math.max(R*kk,1e-3)});
+        res.push({id:k.id+'#b',a:w,b:u2,g:1/Math.max(R*(1-kk),1e-3)});
+        break;
+      }
+      case 'trafo':{
+        const n=Math.max(k.prop.n,1e-4);
+        const s1=sim(k.id+':2'), s2=sim(k.id+':3');
+        const pA=simpulDalam(), sA=simpulDalam();
+        /* p1 -Rp- pA -[belitan ideal + Lm]- p2 ;  s1 -Rs- sA */
+        res.push({id:k.id+'#rp',a,b:pA,g:1/Math.max(k.prop.Rp,1e-3)});
+        res.push({id:k.id+'#rs',a:s1,b:sA,g:1/Math.max(k.prop.Rs,1e-3)});
+        tf.push({id:k.id,p1:pA,p2:b,s1:sA,s2,n});
+        /* Induktansi magnetisasi. Bersama resistansi belitan, inilah yang
+           membuat trafo MEMBLOKIR DC: arus magnetisasi menanjak sampai
+           dibatasi Rp, dan tegangan imbas turun ke nol. */
+        dyn.push({id:k.id+'#m',a:pA,b,jenis:'L',nilai:Math.max(k.prop.Lm,1e-3)});
+        break;
+      }
+      case 'opamp':{
+        oa.push({id:k.id,p:a,m:b,o:sim(k.id+':2'),
+                 vsat:Math.max(k.prop.Vsat,0.5),
+                 vd:tegOA.has(k.id)?tegOA.get(k.id):0});
+        break;
+      }
+      case 'saklar':    res.push({id:k.id,a,b,g:k.prop.tutup?1e4:1e-12}); break;
+      case 'kapasitor': dyn.push({id:k.id,a,b,jenis:'C',nilai:FARAD(k)}); break;
+      case 'induktor':  dyn.push({id:k.id,a,b,jenis:'L',nilai:HENRY(k)}); break;
+      case 'sumber':    src.push({id:k.id,a,b,jenis:'dc',E:k.prop.E}); break;
+      case 'sumberac':  src.push({id:k.id,a,b,jenis:'ac',Vp:k.prop.Vp,f:k.prop.f,
+                                  ofs:k.prop.ofs||0,fase:k.prop.fase||0}); break;
+      case 'ampere':    src.push({id:k.id,a,b,jenis:'ampere'}); break;
+      case 'npn': case 'pnp':{
+        const p=Object.assign({},TR_JENIS[k.jenis]);
+        p.bf=Math.max(k.prop.bf||100,1);
+        const lalu=tegTrans.get(k.id)||{vbe:0,vbc:0};
+        const nvf=p.nf*VT;
+        tr.push({id:k.id,p,
+                 b:sim(k.id+':0'), c:sim(k.id+':1'), e:sim(k.id+':2'),
+                 nvf,vkritis:nvf*Math.log(nvf/(Math.SQRT2*p.Is)),
+                 vbe:lalu.vbe, vbc:lalu.vbc});
+        break;
+      }
+      case 'dioda': case 'led': case 'zener':{
+        const d=Object.assign({},DIODA_JENIS[k.jenis]);
+        if(k.jenis==='zener') d.Vz=Math.max(k.prop.Vz,0.5);
+        const nvt=d.n*VT;
+        nl.push({id:k.id,a,b,p:d,nvt,
+                 vkritis:nvt*Math.log(nvt/(Math.SQRT2*d.Is)),
+                 vkritisBD:d.Ibv>0?nvt*Math.log(nvt/(Math.SQRT2*d.Ibv)):0,
+                 v:tegDioda.has(k.id)?tegDioda.get(k.id):0});
+        break;
+      }
+    }
+  }
+  const n=Math.max(jumlahSimpul-1,0);
+  let baris=n;
+  src.forEach(x=>x.r=baris++);
+  tf.forEach(x=>x.r=baris++);      /* satu peubah arus primer per trafo */
+  oa.forEach(x=>x.r=baris++);      /* satu peubah arus keluaran per op-amp */
+  return {n,N:baris,res,src,dyn,nl,tr,tf,oa,jumlah:jumlahSimpul};
+}
+
+let bufV=null;
+/* toleransi bergaya SPICE: mutlak 1 µV ditambah 0,1% dari nilainya.
+   Toleransi mutlak yang terlalu ketat membuat iterasi tak pernah 'selesai'
+   padahal jawabannya sudah cukup baik. */
+const MAKS_ITER=100, VNTOL=1e-6, RELTOL=1e-3;
+/* penuh=false: hanya majukan keadaan, tanpa menyusun Map arus. */
+function langkahRencana(R,h,penuh,tUjung){
+  const N=R.N;
+  if(N===0) return {V:[0],arusKomp:new Map(),iter:0,konvergen:true};
+  const takLinear=R.nl.length>0||R.tr.length>0||R.oa.length>0;
+  const maksIter=takLinear?MAKS_ITER:1;
+  if(!bufV||bufV.length!==R.jumlah) bufV=new Array(R.jumlah).fill(0);
+  const V=bufV;
+  let x=null, iter=0, konvergen=!takLinear;
+
+  for(iter=1;iter<=maksIter;iter++){
+    siapkanBuf(N);
+    const A=bufA, z=bufZ;
+    const G=(a,b,g)=>{
+      if(a>0) A[(a-1)*N+(a-1)]+=g;
+      if(b>0) A[(b-1)*N+(b-1)]+=g;
+      if(a>0&&b>0){ A[(a-1)*N+(b-1)]-=g; A[(b-1)*N+(a-1)]-=g }
+    };
+    const Isrc=(a,b,I)=>{ if(a>0) z[a-1]-=I; if(b>0) z[b-1]+=I };
+
+    for(const e of R.res) G(e.a,e.b,e.g);
+    for(const d of R.dyn){
+      d.lalu=keadaan.has(d.id)?keadaan.get(d.id):0;
+      if(d.jenis==='C'){ d.Geq=d.nilai/h; G(d.a,d.b,d.Geq); Isrc(d.a,d.b,-d.Geq*d.lalu) }
+      else             { d.Geq=h/d.nilai; G(d.a,d.b,d.Geq); Isrc(d.a,d.b,d.lalu) }
+    }
+    for(const d of R.nl){                 /* linearisasi di sekitar d.v */
+      const {I,g}=arusDioda(d.p,d.v);
+      d.g=g; d.Ilin=I;
+      G(d.a,d.b,g);
+      Isrc(d.a,d.b,I-g*d.v);
+    }
+    for(const t of R.tr){
+      const sg=t.p.sg;
+      const {Ic,Ib,gcf,gcr,gbf,gbr}=arusTransistor(t.p,t.vbe,t.vbc);
+      t.Ic=sg*Ic; t.Ib=sg*Ib;
+      /* arus yang MENINGGALKAN tiap kaki, dinyatakan dalam vbe & vbc */
+      const simpul=[t.b,t.c,t.e];
+      const L=[sg*Ib, sg*Ic, -sg*(Ib+Ic)];
+      /* baris: d(arus keluar kaki i)/dV(kaki j)  — vbe=vb-ve, vbc=vb-vc */
+      const J=[
+        [ gbf+gbr, -gbr, -gbf ],
+        [ gcf+gcr, -gcr, -gcf ],
+        [ -(gbf+gbr+gcf+gcr), gbr+gcr, gbf+gcf ]
+      ];
+      /* Titik linearisasi harus dinyatakan dalam koordinat TEGANGAN SIMPUL,
+         bukan peubah internal vbe/vbc. Untuk PNP (sg=-1) keduanya berbeda
+         tanda, dan kalau tertukar hasilnya salah tanpa terlihat salah. */
+      const Vlin=[sg*t.vbe, sg*(t.vbe-t.vbc), 0];   /* [Vb, Vc, Ve], Ve=0 lokal */
+      for(let i=0;i<3;i++){
+        const a=simpul[i]; if(a<=0) continue;
+        let ieq=L[i];
+        for(let j=0;j<3;j++){
+          ieq-=J[i][j]*Vlin[j];
+          const bb=simpul[j];
+          if(bb>0) A[(a-1)*N+(bb-1)]+=J[i][j];
+        }
+        z[a-1]-=ieq;
+      }
+      /* gmin lemah pada kedua sambungan, menolong konduksi awal */
+      G(t.b,t.e,1e-12); G(t.b,t.c,1e-12);
+    }
+    /* Trafo ideal: Vs = n*Vp dan Is = -Ip/n, dengan satu peubah arus primer.
+       Baris kendala menegakkan hubungan tegangannya; kolomnya menyalurkan
+       arus ke kedua belitan dengan perbandingan sama, sehingga daya kekal. */
+    for(const w of R.tf){
+      const r=w.r, inv=1/w.n;
+      if(w.p1>0){ A[(w.p1-1)*N+r]+=1;   A[r*N+(w.p1-1)]-=w.n }
+      if(w.p2>0){ A[(w.p2-1)*N+r]-=1;   A[r*N+(w.p2-1)]+=w.n }
+      if(w.s1>0){ A[(w.s1-1)*N+r]-=inv; A[r*N+(w.s1-1)]+=1 }
+      if(w.s2>0){ A[(w.s2-1)*N+r]+=inv; A[r*N+(w.s2-1)]-=1 }
+      z[r]=0;
+    }
+    for(const o of R.oa){
+      const ke=keluaranOA(o.vd,o.vsat);
+      o.vo=ke.V; o.dV=ke.dV;
+      const r=o.r;
+      if(o.o>0){ A[(o.o-1)*N+r]+=1; A[r*N+(o.o-1)]+=1 }
+      if(o.p>0) A[r*N+(o.p-1)]-=ke.dV;
+      if(o.m>0) A[r*N+(o.m-1)]+=ke.dV;
+      z[r]=ke.V-ke.dV*o.vd;
+    }
+    for(const q of R.src){
+      if(q.a>0){ A[(q.a-1)*N+q.r]+=1; A[q.r*N+(q.a-1)]+=1 }
+      if(q.b>0){ A[(q.b-1)*N+q.r]-=1; A[q.r*N+(q.b-1)]-=1 }
+      z[q.r]=nilaiSumber(q,tUjung);
+    }
+    x=selesaikanDalam(A,z,N);
+    V[0]=0;
+    for(let i=1;i<R.jumlah;i++) V[i]=x[i-1];
+    if(!takLinear){
+      for(let i=1;i<R.jumlah;i++) if(!isFinite(V[i])){konvergen=false;V[i]=0}
+      break;
+    }
+
+    /* Penjaga NaN: tanpa ini, NaN lolos dari pemeriksaan konvergensi karena
+       perbandingan apa pun dengan NaN bernilai false. */
+    let rusak=false;
+    for(let i=1;i<R.jumlah;i++) if(!isFinite(V[i])) rusak=true;
+    if(rusak){ konvergen=false; break }
+    let cukup=true;
+    for(const o of R.oa){
+      let vd=V[o.p]-V[o.m];
+      /* vd ditentukan oleh rangkaian, bukan peubah yang perlu dicekik.
+         Versi pertama membatasinya beberapa milivolt per iterasi, sehingga
+         pembanding dengan selisih 0,5 V perlu ratusan iterasi untuk merambat
+         sampai ke sana. Pembatas kini longgar, dan tanh sendiri sudah
+         menjamin keluarannya terbatas. */
+      const batas=Math.max(o.vsat*0.5,1e-3);
+      if(Math.abs(vd-o.vd)>batas) vd=o.vd+Math.sign(vd-o.vd)*batas;
+      if(Math.abs(vd-o.vd)>1e-9+RELTOL*Math.abs(vd)) cukup=false;
+      o.vd=vd;
+    }
+    for(const t of R.tr){
+      const sg=t.p.sg;
+      let vbe=sg*(V[t.b]-V[t.e]), vbc=sg*(V[t.b]-V[t.c]);
+      vbe=batasiPN(vbe,t.vbe,t.nvf,t.vkritis);
+      vbc=batasiPN(vbc,t.vbc,t.nvf,t.vkritis);
+      if(Math.abs(vbe-t.vbe)>VNTOL+RELTOL*Math.abs(vbe)) cukup=false;
+      if(Math.abs(vbc-t.vbc)>VNTOL+RELTOL*Math.abs(vbc)) cukup=false;
+      t.vbe=vbe; t.vbc=vbc;
+    }
+    for(const d of R.nl){
+      const vb=batasiDioda(d, V[d.a]-V[d.b]);
+      if(Math.abs(vb-d.v) > VNTOL+RELTOL*Math.abs(vb)) cukup=false;
+      d.v=vb;
+    }
+    if(cukup){ konvergen=true; break }
+  }
+  const arusKomp=penuh?new Map():null;
+  if(penuh){
+    for(const e of R.res) arusKomp.set(e.id,(V[e.a]-V[e.b])*e.g);
+    for(const q of R.src) arusKomp.set(q.id,x[q.r]);
+    for(const d of R.nl) arusKomp.set(d.id,arusDioda(d.p,V[d.a]-V[d.b]).I);
+    for(const w of R.tf){
+      arusKomp.set(w.id,x[w.r]);
+      arusKomp.set(w.id+'#s',-x[w.r]/w.n);
+    }
+    for(const o of R.oa) arusKomp.set(o.id,x[o.r]);
+    for(const t of R.tr){
+      const sg=t.p.sg, a=arusTransistor(t.p,sg*(V[t.b]-V[t.e]),sg*(V[t.b]-V[t.c]));
+      arusKomp.set(t.id,sg*a.Ic);              /* yang dilaporkan: arus kolektor */
+      arusKomp.set(t.id+'#b',sg*a.Ib);
+    }
+  }
+  for(const d of R.dyn){
+    const v=V[d.a]-V[d.b];
+    if(d.jenis==='C'){ d.akhir=v;               if(penuh) arusKomp.set(d.id,d.Geq*(v-d.lalu)) }
+    else             { d.akhir=d.lalu+d.Geq*v;  if(penuh) arusKomp.set(d.id,d.akhir) }
+  }
+  /* Salin V bila hasilnya akan dipegang pemanggil. Tanpa ini, dua hasil
+     yang disimpan berurutan menunjuk ke penyangga yang sama, dan yang lama
+     ikut berubah — jebakan yang sulit terlihat. */
+  return {V:penuh?V.slice():V,arusKomp:arusKomp||new Map(),iter,konvergen};
+}
+
+/* Keadaan baru hanya dituliskan SETELAH langkahnya diterima. Percobaan yang
+   gagal konvergen karena itu tidak sempat mengotori muatan kapasitor. */
+function komit(R){
+  for(const o of R.oa) tegOA.set(o.id,o.vd);
+  for(const t of R.tr) tegTrans.set(t.id,{vbe:t.vbe,vbc:t.vbc});
+  for(const d of R.nl) tegDioda.set(d.id,d.v);
+  for(const d of R.dyn) keadaan.set(d.id,d.akhir);
+}
+
+/* Maju sejumlah waktu simulasi.
+   h dipilih dari waktu yang diminta; makin lambat pemutaran, makin kecil h,
+   jadi gerak lambat sekaligus lebih akurat. */
+const H_MAKS=20e-6, H_MIN=1e-7, SUBSTEP_TARGET=150, MAKS_SUBSTEP=3000;
+const pilihH=dtSim=>Math.min(Math.max(dtSim/SUBSTEP_TARGET,H_MIN),H_MAKS);
+const TAK_LINEAR=['dioda','led','zener','npn','pnp'];
+const adaTakLinear=M=>M.komponen.some(k=>TAK_LINEAR.indexOf(k.jenis)>=0);
+const adaAC=M=>M.komponen.some(k=>k.jenis==='sumberac');
+const perluWaktu=M=>adaDinamis(M)||adaAC(M);
+
+function majuWaktu(M,dtSim){
+  const net=bikinNet(M);
+  if(!net.adaMassa) return {ok:false,alasan:'tanpaMassa',net,dtTerpakai:0};
+  const R=susunRencana(M,net);
+  const takLinear=R.nl.length>0||R.tr.length>0;
+  if(!perluWaktu(M)){
+    const r=langkahRencana(R,1e-3,true,tSim);
+    komit(R); tSim+=dtSim;
+    return {ok:true,net,...r,langkah:1,dtTerpakai:dtSim,h:0,gagal:r.konvergen?0:1,iterMaks:r.iter};
+  }
+  const h=pilihH(dtSim);
+  let sisa=dtSim, jml=0, r=null, pakai=0, gagal=0, iterMaks=0, kecil=0;
+  while(sisa>h*1e-6 && jml<MAKS_SUBSTEP){
+    let hh=Math.min(h,sisa), coba=0, rr=null;
+    /* Kalau Newton-Raphson tidak konvergen, perkecil langkah waktunya dan
+       coba lagi. Ini yang menyelamatkan penyearah berkapasitor: pada saat
+       dioda menyala, keadaan berubah terlalu cepat untuk langkah sebesar h. */
+    for(;;){
+      rr=langkahRencana(R,hh,takLinear||(sisa-hh)<=h*1e-6,tSim+hh);
+      if(rr.konvergen || coba>=6 || hh<=4*H_MIN) break;
+      hh/=4; coba++; kecil++;
+    }
+    komit(R);
+    if(!rr.konvergen) gagal++;
+    iterMaks=Math.max(iterMaks,rr.iter);
+    tSim+=hh; sisa-=hh; pakai+=hh; jml++;
+    r=rr;
+  }
+  if(!r){ r=langkahRencana(R,h,true,tSim); komit(R) }
+  return {ok:true,net,...r,langkah:jml,dtTerpakai:pakai,h,
+          terpotong:sisa>h*1e-6, gagal, iterMaks, kecil};
+}
+
+function arusPerKawat(M,net,arusKomp){
+  const inj=new Map();
+  const tambah=(k,v)=>inj.set(k,(inj.get(k)||0)+v);
+  const pinMassa=[];
+  for(const k of M.komponen){
+    if(k.jenis==='massa'){ pinMassa.push(k.id+':0'); tambah(k.id+':0',0); continue }
+    if(k.jenis==='potensio'){
+      const ia=arusKomp.get(k.id+'#a')||0, ib=arusKomp.get(k.id+'#b')||0;
+      tambah(k.id+':0',-ia); tambah(k.id+':1',ia-ib); tambah(k.id+':2',ib);
+      continue;
+    }
+    if(k.jenis==='trafo'){
+      /* yang mengalir di kaki adalah arus resistansi belitan */
+      const irp=arusKomp.get(k.id+'#rp')||0, irs=arusKomp.get(k.id+'#rs')||0;
+      const ip=arusKomp.get(k.id)||0, im=arusKomp.get(k.id+'#m')||0;
+      tambah(k.id+':0',-irp); tambah(k.id+':1',ip+im);
+      tambah(k.id+':2',-irs); tambah(k.id+':3',arusKomp.get(k.id+'#s')||0);
+      continue;
+    }
+    if(k.jenis==='opamp'){
+      const io=arusKomp.get(k.id)||0;
+      tambah(k.id+':0',0); tambah(k.id+':1',0); tambah(k.id+':2',-io);
+      continue;
+    }
+    if(k.jenis==='npn'||k.jenis==='pnp'){
+      /* tiga kaki: arus masuk basis dan kolektor, keluar lewat emitor */
+      const ic=arusKomp.get(k.id)||0, ib=arusKomp.get(k.id+'#b')||0;
+      tambah(k.id+':0',-ib); tambah(k.id+':1',-ic); tambah(k.id+':2',ib+ic);
+      continue;
+    }
+    if(k.pin.length<2){ tambah(k.id+':0',0); continue }
+    const i=arusKomp.get(k.id)||0;
+    tambah(k.id+':0',-i); tambah(k.id+':1',i);
+  }
+  for(const pm of pinMassa){
+    const r=net.akar(pm); let jum=0;
+    for(const [p,v] of inj) if(net.akar(p)===r && p!==pm) jum+=v;
+    inj.set(pm,-jum);
+  }
+  const sisi=new Map();
+  M.kawat.forEach((w,i)=>{
+    if(!sisi.has(w.a)) sisi.set(w.a,[]);
+    if(!sisi.has(w.b)) sisi.set(w.b,[]);
+    sisi.get(w.a).push(i); sisi.get(w.b).push(i);
+  });
+  const hasilK=new Map(), hidupK=new Set(M.kawat.keys());
+  const derajat=new Map();
+  for(const [p,ls] of sisi) derajat.set(p,ls.length);
+  const akum=new Map(inj);
+  let jalan=true;
+  while(jalan){
+    jalan=false;
+    for(const [p,d] of derajat){
+      if(d!==1) continue;
+      const i=sisi.get(p).find(j=>hidupK.has(j));
+      if(i===undefined) continue;
+      const w=M.kawat[i], lain=(w.a===p)?w.b:w.a, s=akum.get(p)||0;
+      hasilK.set(i, w.a===p ? s : -s);
+      akum.set(lain,(akum.get(lain)||0)+s);
+      hidupK.delete(i); derajat.set(p,0);
+      derajat.set(lain,(derajat.get(lain)||1)-1);
+      jalan=true;
+    }
+  }
+  for(const i of hidupK) hasilK.set(i,0);
+  return hasilK;
+}
+
+/* ==========================================================================
+   2. KATALOG KOMPONEN
+      kotak: [x0,y0,x1,y1] dalam koordinat lokal — mengikuti bentuk simbol
+      yang benar-benar tergambar, BUKAN kotak seragam. Label teks sengaja
+      tidak dihitung supaya tidak melebar tanpa perlu.
+   ========================================================================== */
+const P=40, KISI=20;
+const JENIS={
+  sumber:{nama:'Sumber DC',pin:[[0,-P],[0,P]],kotak:[-19,-P,19,P],prop:{E:12},
+    field:[{k:'E',nm:'Tegangan',sat:'V',jenis:'angka',min:0,max:30,step:.1}],gambar:gSumber},
+  resistor:{nama:'Resistor',pin:[[-P,0],[P,0]],kotak:[-P,-10,P,10],prop:{R:220},
+    field:[{k:'R',nm:'Resistansi',sat:'Ω',jenis:'angka',min:1,max:1e7,step:1,log:true},
+           {k:'R',nm:'Pilih nilai seri E12',jenis:'daftar',fmt:'ohm',
+            opsi:[10,22,47,100,220,470,1000,2200,4700,10000,22000,47000,
+                  100000,220000,470000,1e6,2.2e6,4.7e6,1e7]}],gambar:gResistor},
+  saklar:{nama:'Saklar',pin:[[-P,0],[P,0]],kotak:[-P,-17,P,9],
+    tuas:[{dx:0,dy:-30,aksi:'toggle'}],prop:{tutup:1},
+    field:[{k:'tutup',nm:'Keadaan',jenis:'daftar',
+            opsi:[{v:1,t:'Tertutup'},{v:0,t:'Terbuka'}]}],gambar:gSaklar},
+  ampere:{nama:'Amperemeter',pin:[[-P,0],[P,0]],kotak:[-P,-15,P,15],prop:{skop:0,nama:'A1'},
+    field:[{k:'nama',nm:'Nama alat',jenis:'teks'}],gambar:gAmpere},
+  volt:{nama:'Voltmeter',pin:[[-P,0],[P,0]],kotak:[-P,-15,P,15],prop:{skop:0,nama:'V1'},
+    field:[{k:'nama',nm:'Nama alat',jenis:'teks'}],gambar:gVolt},
+  probe:{nama:'Probe',pin:[[0,0]],kotak:[-6,-35,27,7],prop:{nama:'P1'},
+    field:[{k:'nama',nm:'Nama alat',jenis:'teks'}],gambar:gProbe},
+  kapasitor:{nama:'Kapasitor',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{C:10},
+    field:[{k:'C',nm:'Kapasitansi',sat:'µF',jenis:'angka',min:.001,max:1e6,step:.001,log:true},
+           {k:'C',nm:'Pilih nilai umum',jenis:'daftar',fmt:'farad',
+            opsi:[.001,.01,.1,.22,.47,1,2.2,4.7,10,22,47,100,220,470,1000,
+                  2200,4700,10000,47000,100000,470000,1e6]}],gambar:gKapasitor},
+  induktor:{nama:'Induktor',pin:[[-P,0],[P,0]],kotak:[-P,-14,P,8],prop:{L:100},
+    field:[{k:'L',nm:'Induktansi',sat:'mH',jenis:'angka',min:.01,max:1e5,step:.01,log:true},
+           {k:'L',nm:'Pilih nilai umum',jenis:'daftar',fmt:'henry',
+            opsi:[.1,1,4.7,10,47,100,470,1000,4700,10000,100000]}],gambar:gInduktor},
+  potensio:{nama:'Potensiometer',pin:[[-P,0],[0,-P],[P,0]],kotak:[-P,-P,P,16],
+    tuas:[{dx:-18,dy:-52,aksi:'kurang'},{dx:18,dy:-52,aksi:'tambah'}],
+    prop:{R:10000,pos:.5},
+    field:[{k:'pos',nm:'Kedudukan penyapu',sat:'',jenis:'angka',min:0,max:1,step:.01},
+           {k:'R',nm:'Resistansi total',sat:'Ω',jenis:'angka',min:100,max:1e7,step:1,log:true},
+           {k:'R',nm:'Pilih nilai umum',jenis:'daftar',fmt:'ohm',
+            opsi:[470,1000,4700,10000,47000,100000,470000,1e6]}],
+    gambar:gPotensio},
+  trafo:{nama:'Transformator',pin:[[-P,-P],[-P,P],[P,-P],[P,P]],kotak:[-P,-P,P,P],
+    prop:{n:12/220,Lm:20,Rp:8,Rs:.5},
+    field:[{k:'n',nm:'Pilih perbandingan',jenis:'daftar',opsi:[
+              {v:12/220,t:'220 V → 12 V'},{v:9/220,t:'220 V → 9 V'},
+              {v:24/220,t:'220 V → 24 V'},{v:1,t:'1 : 1 (isolasi)'},
+              {v:2,t:'penaik 1 : 2'},{v:10,t:'penaik 1 : 10'}]},
+           {k:'n',nm:'Perbandingan lilitan Ns/Np',jenis:'angka',min:.005,max:20,step:.005},
+           {k:'Lm',nm:'Induktansi magnetisasi',sat:'H',jenis:'angka',min:.1,max:200,step:.1},
+           {k:'Rp',nm:'Resistansi belitan primer',sat:'Ω',jenis:'angka',min:.01,max:500,step:.01},
+           {k:'Rs',nm:'Resistansi belitan sekunder',sat:'Ω',jenis:'angka',min:.01,max:500,step:.01}],
+    gambar:gTrafo},
+  opamp:{nama:'Op-amp',pin:[[-P,-20],[-P,20],[P,0]],kotak:[-P,-30,P,30],
+    prop:{Vsat:12},
+    field:[{k:'Vsat',nm:'Tegangan jenuh ±',sat:'V',jenis:'angka',min:1,max:30,step:.5},
+           {k:'Vsat',nm:'Pilih catu',jenis:'daftar',opsi:[
+              {v:5,t:'±5 V'},{v:9,t:'±9 V'},{v:12,t:'±12 V'},{v:15,t:'±15 V'}]}],
+    gambar:gOpamp},
+  npn:{nama:'Transistor NPN',pin:[[-P,0],[20,-P],[20,P]],kotak:[-P,-P,22,P],
+    prop:{bf:100},
+    field:[{k:'bf',nm:'Penguatan arus β',jenis:'angka',min:10,max:600,step:5},
+           {k:'bf',nm:'Pilih nilai umum',jenis:'daftar',opsi:[
+              {v:50,t:'50 (β rendah)'},{v:100,t:'100'},{v:200,t:'200'},{v:400,t:'400 (β tinggi)'}]}],
+    gambar:gNPN},
+  pnp:{nama:'Transistor PNP',pin:[[-P,0],[20,-P],[20,P]],kotak:[-P,-P,22,P],
+    prop:{bf:100},
+    field:[{k:'bf',nm:'Penguatan arus β',jenis:'angka',min:10,max:600,step:5},
+           {k:'bf',nm:'Pilih nilai umum',jenis:'daftar',opsi:[
+              {v:50,t:'50'},{v:100,t:'100'},{v:200,t:'200'},{v:400,t:'400'}]}],
+    gambar:gPNP},
+  dioda:{nama:'Dioda',pin:[[-P,0],[P,0]],kotak:[-P,-12,P,12],prop:{},
+    field:[],gambar:gDioda},
+  led:{nama:'LED',pin:[[-P,0],[P,0]],kotak:[-P,-17,P,17],prop:{warna:0},
+    field:[{k:'warna',nm:'Warna',jenis:'daftar',
+            opsi:[{v:0,t:'Merah'},{v:1,t:'Hijau'},{v:2,t:'Kuning'},{v:3,t:'Biru'}]}],
+    gambar:gLed},
+  zener:{nama:'Dioda zener',pin:[[-P,0],[P,0]],kotak:[-P,-12,P,12],prop:{Vz:5.1},
+    field:[{k:'Vz',nm:'Tegangan dadal',sat:'V',jenis:'angka',min:1.8,max:33,step:.1},
+           {k:'Vz',nm:'Pilih nilai umum',jenis:'daftar',fmt:'volt',opsi:[3.3,4.7,5.1,6.2,9.1,12,15]}],
+    gambar:gZener},
+  sumberac:{nama:'Sumber AC',pin:[[0,-P],[0,P]],kotak:[-20,-P,20,P],
+    prop:{Vp:12,f:50,ofs:0,fase:0},
+    field:[{k:'Vp',nm:'Tegangan puncak',sat:'V',jenis:'angka',min:.001,max:50,step:.001},
+           {k:'Vp',nm:'Pilih tegangan',jenis:'daftar',opsi:[
+              {v:.01,t:'10 mV'},{v:.05,t:'50 mV'},{v:.1,t:'100 mV'},{v:.5,t:'500 mV'},
+              {v:1,t:'1 V'},{v:5,t:'5 V'},{v:12,t:'12 V'},{v:24,t:'24 V'}]},
+           {k:'f',nm:'Frekuensi',sat:'Hz',jenis:'angka',min:.5,max:5000,step:.5},
+           {k:'f',nm:'Pilih frekuensi',jenis:'daftar',opsi:[
+              {v:1,t:'1 Hz (pelan)'},{v:10,t:'10 Hz'},{v:50,t:'50 Hz (PLN)'},
+              {v:60,t:'60 Hz'},{v:1000,t:'1 kHz'}]}],
+    gambar:gSumberAC},
+  massa:{nama:'Massa (GND)',pin:[[0,-20]],kotak:[-15,-20,15,15],prop:{},field:[],gambar:gMassa},
+  /* Titik cabang: tidak punya sifat listrik apa pun, hanya menyatukan kawat.
+     Inilah yang memungkinkan percabangan di tengah kawat. */
+  simpul:{nama:'Titik cabang',pin:[[0,0]],kotak:[-8,-8,8,8],prop:{},field:[],gambar:gSimpul}
+};
+const KELOMPOK=[
+  {nama:'Sumber &amp; massa', isi:['sumber','sumberac','massa']},
+  {nama:'Pasif',              isi:['resistor','potensio','kapasitor','induktor','trafo']},
+  {nama:'Aktif',              isi:['dioda','led','zener']},
+  {nama:'Transistor',         isi:['npn','pnp']},
+  {nama:'Op-amp',             isi:['opamp']},
+  {nama:'Alat ukur',          isi:['ampere','volt','probe']},
+  {nama:'Lainnya',            isi:['saklar','simpul']}
+];
+const URUT=KELOMPOK.reduce((a,g)=>a.concat(g.isi),[]);
+
+/* ==========================================================================
+   3. KEADAAN
+   ========================================================================== */
+const M={komponen:[],kawat:[]};
+let nomorBerikut=1, hidup=false;
+let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
+/* satu penanda untuk dua pilihan tampilan: bit 1 = nilai, bit 2 = kotak klik */
+let modeTampil=1;
+const MODE_NAMA=['Bersih','Nilai','Kotak','Nilai+Kotak'];
+const APLIKASI='SASMITA';
+const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
+let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+let jeda=false;                     /* waktu simulasi dibekukan di tempat */
+let lalu=0;                         /* penanda waktu bingkai sebelumnya */
+let pan={x:-30,y:-30}, zoom=1, hasil=null, cascade=0;
+/* waktu */
+const SKALA=[1,.2,.05,.01];
+let iSkala=1;                       /* mulai di 0,2x supaya pengisian terlihat */
+const vMaks=new Map();              /* puncak |v| tiap kapasitor, untuk visual */
+const jejak=new Map();              /* riwayat tiap alat ukur, untuk osiloskop */
+
+/* ==========================================================================
+   4. GEOMETRI & UJI SENTUH — murni hitungan, tanpa DOM.
+   ========================================================================== */
+const bulat=v=>Math.round(v/KISI)*KISI;
+const px=n=>n/zoom;
+
+/* Pegangan digambar TEPAT di titik pin (jarak 0). Versi sebelumnya
+   menggesernya ke luar, dan itu membuat sasarannya rancu ketika komponen
+   berdekatan: pegangan sebuah pin bisa tampak lebih dekat ke pin tetangga. */
+const JAUH_PEGANGAN=0;
+const R_PEGANGAN=15;         /* radius tangkap pegangan, piksel layar */
+const R_TUAS=16;             /* radius tangkap tuas saklar, piksel layar */
+const PAD_BADAN=4;           /* pelonggaran kotak badan, piksel layar */
+const R_KAWAT=11;            /* radius tangkap kawat, piksel layar */
+const AMBANG_GERAK=4;
+
+/* cermin dilakukan LEBIH DULU pada sumbu x lokal, lalu diputar. Cermin
+   tegak = cermin datar + putar 180 derajat, jadi satu penanda cukup. */
+function putar(k,x,y){
+  if(k.cx) x=-x;
+  const c=Math.cos(k.rot*Math.PI/2), s=Math.sin(k.rot*Math.PI/2);
+  return [k.x+x*c-y*s, k.y+x*s+y*c];
+}
+/* kebalikan putar(): dari koordinat dunia ke koordinat lokal komponen,
+   sehingga kotak yang sempit tetap benar meski komponennya diputar */
+function keLokal(k,wx,wy){
+  const t=-k.rot*Math.PI/2, c=Math.cos(t), s=Math.sin(t);
+  const dx=wx-k.x, dy=wy-k.y;
+  const lx=dx*c-dy*s, ly=dx*s+dy*c;
+  return [k.cx?-lx:lx, ly];
+}
+function posPin(k,i){
+  const [dx,dy]=JENIS[k.jenis].pin[i];
+  return putar(k,dx,dy);
+}
+function posPegangan(k,i){
+  const [dx,dy]=JENIS[k.jenis].pin[i];
+  let ux=dx,uy=dy,L=Math.hypot(dx,dy);
+  if(L<1e-6){ux=0;uy=1;L=1}
+  ux/=L; uy/=L;
+  return putar(k, dx+ux*JAUH_PEGANGAN, dy+uy*JAUH_PEGANGAN);
+}
+const komponenOleh=id=>M.komponen.find(k=>k.id===id);
+function posPinKunci(kunci){
+  const [id,i]=kunci.split(':'); const k=komponenOleh(id);
+  return k?posPin(k,+i):null;
+}
+
+/* --- jalur kawat ---------------------------------------------------------
+   Setiap kawat menyimpan orientasi segmen tengah dan letaknya (m).
+   orient 'v': segmen tengah tegak di x=m    -> p ┐ │ ┌ q
+   orient 'h': segmen tengah datar di y=m
+   Bila m belum pernah diatur, hasilnya sama dengan siku sederhana. */
+function jalurKawat(w,p,q){
+  const orient=w.orient||'v';
+  const m=(w.m===undefined||w.m===null)?(orient==='v'?q[0]:q[1]):w.m;
+  const kasar = orient==='v'
+    ? [p,[m,p[1]],[m,q[1]],q]
+    : [p,[p[0],m],[q[0],m],q];
+  const out=[kasar[0]];
+  for(let i=1;i<kasar.length;i++){
+    const a=out[out.length-1];
+    if(Math.abs(a[0]-kasar[i][0])>1e-6||Math.abs(a[1]-kasar[i][1])>1e-6) out.push(kasar[i]);
+  }
+  return out;
+}
+
+function peganganAktif(){
+  if(pinTertunda) return M.komponen;
+  if(dipilih) return [dipilih];
+  return [];
+}
+function peganganDi(wx,wy){
+  const r=px(R_PEGANGAN); let best=null, bd=r;
+  for(const k of peganganAktif()) k.pin.forEach((_,i)=>{
+    const [x,y]=posPegangan(k,i), d=Math.hypot(x-wx,y-wy);
+    if(d<bd){bd=d;best=k.id+':'+i}
+  });
+  return best;
+}
+function badanDi(wx,wy){
+  const pad=px(PAD_BADAN);
+  for(let i=M.komponen.length-1;i>=0;i--){
+    const k=M.komponen[i];
+    const [lx,ly]=keLokal(k,wx,wy);
+    const [x0,y0,x1,y1]=JENIS[k.jenis].kotak;
+    if(lx>=x0-pad&&lx<=x1+pad&&ly>=y0-pad&&ly<=y1+pad) return k;
+  }
+  return null;
+}
+/* mengembalikan juga segmen mana yang tersentuh dan arahnya, karena itulah
+   yang menentukan ke arah mana jalur bisa digeser */
+function kawatDi(wx,wy){
+  const r=px(R_KAWAT);
+  for(let i=M.kawat.length-1;i>=0;i--){
+    const pts=M.kawat[i].jalur||[];
+    for(let j=0;j<pts.length-1;j++){
+      const [ax,ay]=pts[j],[bx,by]=pts[j+1];
+      const dx=bx-ax, dy=by-ay, L=Math.hypot(dx,dy);
+      if(L<3) continue;
+      let t=((wx-ax)*dx+(wy-ay)*dy)/(L*L); t=Math.max(0,Math.min(1,t));
+      if(Math.hypot(wx-(ax+dx*t),wy-(ay+dy*t))<r)
+        return {i,seg:j,tegak:Math.abs(dx)<1e-6};
+    }
+  }
+  return null;
+}
+/* Satu komponen boleh punya beberapa tuas: saklar satu (buka/tutup),
+   potensiometer dua (turun/naik). */
+function daftarTuas(k){
+  const t=JENIS[k.jenis].tuas;
+  if(!t) return [];
+  return t.map(u=>({aksi:u.aksi,p:putar(k,u.dx,u.dy)}));
+}
+function tuasDi(wx,wy){
+  const r=px(R_TUAS);
+  for(let i=M.komponen.length-1;i>=0;i--){
+    const k=M.komponen[i];
+    for(const u of daftarTuas(k))
+      if(Math.hypot(u.p[0]-wx,u.p[1]-wy)<r) return {k,aksi:u.aksi};
+  }
+  return null;
+}
+function ujiTitik(wx,wy){
+  const pg=peganganDi(wx,wy);
+  if(pg) return {t:'pegangan',kunci:pg};
+  const tu=tuasDi(wx,wy);
+  if(tu) return {t:'tuas',k:tu.k,aksi:tu.aksi};
+  const k=badanDi(wx,wy);
+  if(k) return {t:'badan',k};
+  const kw=kawatDi(wx,wy);
+  if(kw) return {t:'kawat',...kw};
+  return {t:'kosong'};
+}
+
+/* ===== titik cabang di tengah kawat =====================================
+   Kawat dibelah menjadi dua, dan sebuah komponen 'simpul' diletakkan di
+   titik potongnya. Karena semua pin berada di kelipatan kisi, garis kawat
+   selalu melewati titik kisi, sehingga pembulatan tidak menggeser simpul
+   keluar dari garisnya. Union-find tetap menangani sambungannya tanpa
+   perubahan, dan graf kawat tetap berbentuk pohon. */
+function proyeksiSegmen(pts,seg,wx,wy){
+  const [ax,ay]=pts[seg],[bx,by]=pts[seg+1];
+  const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
+  let t=((wx-ax)*dx+(wy-ay)*dy)/L2; t=Math.max(0,Math.min(1,t));
+  return [ax+dx*t,ay+dy*t];
+}
+function belahKawat(i,seg,wx,wy){
+  const w=M.kawat[i]; if(!w||!w.jalur) return null;
+  const pts=w.jalur;
+  const [tx,ty]=proyeksiSegmen(pts,seg,wx,wy);
+  const j=tambahKomponen('simpul',tx,ty);
+  const a=w.a, b=w.b;
+  /* Kedua belahan MEWARISI jalur aslinya, supaya penataan yang sudah rapi
+     tidak berubah. Kalau titik cabang berada di segmen pertama, belahan
+     depan sebetulnya lurus; begitu pula segmen terakhir untuk belahan
+     belakang. Tanpa ini, keduanya kembali ke siku bawaan dan jalur yang
+     sudah diatur ikut bergeser. */
+  const orient=w.orient||'v';
+  const m=(w.m===undefined||w.m===null)?(orient==='v'?pts[pts.length-1][0]:pts[pts.length-1][1]):w.m;
+  const tegakSeg=Math.abs(pts[seg+1][0]-pts[seg][0])<1e-6;
+  const depan = seg===0
+    ? (tegakSeg?{orient:'v',m:pts[0][0]}:{orient:'h',m:pts[0][1]})
+    : {orient,m};
+  const belakang = seg===pts.length-2
+    ? (tegakSeg?{orient:'v',m:pts[pts.length-1][0]}:{orient:'h',m:pts[pts.length-1][1]})
+    : {orient,m};
+  M.kawat.splice(i,1);
+  M.kawat.push({a,b:j.id+':0',orient:depan.orient,m:depan.m,jalur:[]});
+  M.kawat.push({a:j.id+':0',b,orient:belakang.orient,m:belakang.m,jalur:[]});
+  return j;
+}
+
+/* Alat ukur diberi nama otomatis P1/V1/A1 agar bisa dikenali di kanvas
+   maupun di osiloskop; kode k7 tidak memberi tahu apa pun. */
+const NAMA_OTOMATIS={probe:'P',volt:'V',ampere:'A'};
+function namaBaru(jenis){
+  const aw=NAMA_OTOMATIS[jenis];
+  let n=1;
+  const dipakai=new Set(M.komponen.filter(k=>k.jenis===jenis).map(k=>k.prop.nama));
+  while(dipakai.has(aw+n)) n++;
+  return aw+n;
+}
+const namaAlat=k=>(k.prop&&k.prop.nama)?k.prop.nama:k.id;
+function tambahKomponen(jenis,x,y){
+  const def=JENIS[jenis];
+  const k={id:'k'+(nomorBerikut++),jenis,x:bulat(x),y:bulat(y),rot:0,cx:0,
+           prop:{...def.prop},pin:def.pin.map(()=>0)};
+  if(NAMA_OTOMATIS[jenis]) k.prop.nama=namaBaru(jenis);
+  M.komponen.push(k); return k;
+}
+function hapusKomponen(id){
+  const kk=komponenOleh(id);
+  if(kk&&kk.jenis==='simpul'){
+    /* simpul dengan tepat dua kawat: gabungkan lagi agar jalur tidak putus */
+    const kunci=id+':0';
+    const ikut=M.kawat.filter(w=>w.a===kunci||w.b===kunci);
+    if(ikut.length===2){
+      const ujung=ikut.map(w=>w.a===kunci?w.b:w.a);
+      M.kawat=M.kawat.filter(w=>!ikut.includes(w));
+      M.komponen=M.komponen.filter(c=>c.id!==id);
+      sambung(ujung[0],ujung[1]);
+      if(dipilih&&dipilih.id===id) dipilih=null;
+      return;
+    }
+  }
+  M.komponen=M.komponen.filter(k=>k.id!==id);
+  M.kawat=M.kawat.filter(w=>!w.a.startsWith(id+':')&&!w.b.startsWith(id+':'));
+  if(dipilih&&dipilih.id===id) dipilih=null;
+}
+/* ===== penataan jalur otomatis ==========================================
+   Jalur baru dipilih dari beberapa calon, dan yang menabrak kotak komponen
+   paling sedikit yang dipakai. Sebelumnya jalur selalu siku mendatar-dulu,
+   sehingga sering melintas tepat di atas komponen lain.
+   ====================================================================== */
+function kotakDunia(k){
+  const b=JENIS[k.jenis].kotak;
+  const t=[putar(k,b[0],b[1]),putar(k,b[2],b[1]),putar(k,b[2],b[3]),putar(k,b[0],b[3])];
+  const xs=t.map(p=>p[0]), ys=t.map(p=>p[1]);
+  return {x0:Math.min(...xs)-6,x1:Math.max(...xs)+6,
+          y0:Math.min(...ys)-6,y1:Math.max(...ys)+6};
+}
+const segLewat=(ax,ay,bx,by,r)=>
+  !(Math.max(ax,bx)<r.x0||Math.min(ax,bx)>r.x1||
+    Math.max(ay,by)<r.y0||Math.min(ay,by)>r.y1);
+function skorRute(orient,m,p,q,abaikan){
+  const pts=jalurKawat({orient,m},p,q);
+  let tabrak=0,panjang=0;
+  for(let i=0;i<pts.length-1;i++){
+    panjang+=Math.abs(pts[i+1][0]-pts[i][0])+Math.abs(pts[i+1][1]-pts[i][1]);
+    for(const k of M.komponen){
+      if(abaikan.has(k.id)) continue;
+      if(segLewat(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],kotakDunia(k))) tabrak++;
+    }
+  }
+  return tabrak*10000 + panjang + (pts.length-2)*8;
+}
+function rutekanOtomatis(w){
+  const p=posPinKunci(w.a), q=posPinKunci(w.b);
+  if(!p||!q) return;
+  const abaikan=new Set([w.a.split(':')[0],w.b.split(':')[0]]);
+  const mx=bulat((p[0]+q[0])/2), my=bulat((p[1]+q[1])/2);
+  const calon=[['v',q[0]],['v',p[0]],['h',p[1]],['h',q[1]],['v',mx],['h',my]];
+  for(const d of [-100,-60,-40,40,60,100]){
+    calon.push(['v',mx+d]); calon.push(['h',my+d]);
+  }
+  let terbaik=null, skorMin=Infinity;
+  for(const [o,m] of calon){
+    const sk=skorRute(o,m,p,q,abaikan);
+    if(sk<skorMin){ skorMin=sk; terbaik=[o,m] }
+  }
+  if(terbaik){ w.orient=terbaik[0]; w.m=terbaik[1] }
+}
+function sambung(a,b){
+  if(a===b) return false;
+  if(a.split(':')[0]===b.split(':')[0]) return false;
+  if(M.kawat.some(w=>(w.a===a&&w.b===b)||(w.a===b&&w.b===a))) return false;
+  const w={a,b,jalur:[]};
+  M.kawat.push(w);
+  rutekanOtomatis(w);
+  return true;
+}
+
+/* ==========================================================================
+   5. RIWAYAT
+   ========================================================================== */
+const bUndo=document.getElementById('bUndo'), bRedo=document.getElementById('bRedo');
+let tumpukan=[], majuStack=[];
+const potret=()=>JSON.stringify({aplikasi:APLIKASI,versi:VERSI_BERKAS,n:nomorBerikut,nama:namaProyek,
+  k:M.komponen.map(k=>({id:k.id,jenis:k.jenis,x:k.x,y:k.y,rot:k.rot,cx:k.cx||0,prop:k.prop})),
+  w:M.kawat.map(w=>({a:w.a,b:w.b,orient:w.orient,m:w.m}))});
+/* Naikkan berkas lama ke bentuk terkini. Inilah guna penanda versi: bukan
+   sekadar angka, tetapi jalan agar berkas siswa yang dibuat versi lama tetap
+   bisa dibuka setelah bentuk datanya berubah. Mengembalikan null bila berkas
+   dibuat oleh versi yang lebih baru daripada aplikasi ini. */
+function migrasi(d){
+  const v=d.versi||0;
+  if(v>VERSI_BERKAS) return null;
+  if(v===0){
+    /* berkas sebelum penomoran: lengkapi sifat yang waktu itu belum ada */
+    if(!d.nama) d.nama='Rangkaian lama';
+    const hitung={};
+    (d.k||[]).forEach(k=>{
+      if(k.cx===undefined) k.cx=0;
+      const aw={probe:'P',volt:'V',ampere:'A'}[k.jenis];
+      if(aw){
+        k.prop=k.prop||{};
+        if(!k.prop.nama){ hitung[aw]=(hitung[aw]||0)+1; k.prop.nama=aw+hitung[aw] }
+      }
+    });
+    d.versi=1;
+  }
+  return d;
+}
+function pakai(s){
+  const d=typeof s==='string'?JSON.parse(s):s;
+  nomorBerikut=d.n;
+  if(d.nama) namaProyek=d.nama;
+  M.komponen=d.k.map(k=>({...k,cx:k.cx||0,prop:{...k.prop},pin:JENIS[k.jenis].pin.map(()=>0)}));
+  M.kawat=d.w.map(w=>({a:w.a,b:w.b,orient:w.orient,m:w.m,jalur:[]}));
+  dipilih=null; pilihKawat=-1; pinTertunda=null; segarkan(); gambarIns();
+}
+function rekam(){
+  tumpukan.push(potret());
+  if(tumpukan.length>50) tumpukan.shift();
+  majuStack.length=0; setRiwayat();
+}
+const setRiwayat=()=>{bUndo.disabled=!tumpukan.length;bRedo.disabled=!majuStack.length};
+bUndo.addEventListener('click',()=>{
+  if(!tumpukan.length) return; majuStack.push(potret()); pakai(tumpukan.pop()); setRiwayat();
+});
+bRedo.addEventListener('click',()=>{
+  if(!majuStack.length) return; tumpukan.push(potret()); pakai(majuStack.pop()); setRiwayat();
+});
+
+/* ==========================================================================
+   6. GAMBAR
+   ========================================================================== */
+const cv=document.getElementById('cv');
+let ctx=cv.getContext('2d');
+const gaya=getComputedStyle(document.documentElement), C={};
+['copper','charge','silk','muted','hot','panel','panel-dark','panel-up','ok','pilih']
+  .forEach(n=>C[n]=gaya.getPropertyValue('--'+n).trim());
+let lebarCSS=0,tinggiCSS=0;
+function ukur(){
+  const r=cv.getBoundingClientRect();
+  lebarCSS=r.width; tinggiCSS=r.height;
+  const dpr=Math.min(devicePixelRatio||1,2.5);
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+const keDunia=(sx,sy)=>[sx/zoom+pan.x, sy/zoom+pan.y];
+
+function garisJalur(pts,warna,tebal){
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.strokeStyle=warna; ctx.lineWidth=tbl(tebal);
+  ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+}
+/* ===== antrean label ======================================================
+   Label tidak digambar di tempat, melainkan dikumpulkan dulu lalu digambar
+   SETELAH seluruh transformasi komponen dilepas. Dua masalah selesai
+   sekaligus:
+   - teksnya tegak dengan sendirinya, tidak ikut berputar bersama simbol;
+   - karena semuanya diketahui lebih dulu, yang bertabrakan bisa digeser
+     atau disembunyikan menurut prioritas.
+   prio 3 = bagian simbol (tanda kutub, huruf kaki) — tidak pernah digeser
+   prio 2 = bacaan alat ukur        prio 1 = nilai komponen
+   prio 0 = tegangan simpul (paling banyak, paling boleh mengalah)
+   ========================================================================= */
+const labelAntri=[];
+let kompAktif=null;
+const keLayar=(wx,wy)=>[(wx-pan.x)*zoom,(wy-pan.y)*zoom];
+let ikonMode=false;
+const UK_IKON=12;      /* di ikon hanya huruf simbol (>=12 px) yang digambar */
+function antri(t,x,y,warna,uk,rata,prio,mono,alfa){
+  const pr=prio===undefined?1:prio;
+  if(ikonMode){
+    /* Ikon hanya memuat huruf yang MELEKAT pada simbol dan cukup besar —
+       yaitu A dan V di dalam lingkaran alat ukur. Nilai komponen, tanda
+       kutub, dan huruf kaki tidak ikut supaya ikonnya bersih. */
+    if(pr<3 || (uk||10)<UK_IKON) return;
+    ctx.save();
+    ctx.fillStyle=warna; if(alfa!==undefined&&alfa<1) ctx.globalAlpha=alfa;
+    ctx.font=((uk||10)*skalaGaris)+'px '+
+      (mono?'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace':'system-ui, sans-serif');
+    ctx.textAlign=rata||'center'; ctx.textBaseline='middle';
+    ctx.fillText(String(t),x,y);
+    ctx.restore();
+    return;
+  }
+  /* x,y masih dalam koordinat lokal komponen bila sedang menggambar komponen */
+  const [wx,wy]=kompAktif?putar(kompAktif,x,y):[x,y];
+  labelAntri.push({t:String(t),wx,wy,warna,uk:uk||10,rata:rata||'center',
+                   prio:pr,mono:!!mono,alfa:alfa===undefined?1:alfa});
+}
+function tks(t,x,y,warna,uk,rata,prio){ antri(t,x,y,warna,uk||11,rata,prio,true) }
+function sbl(t,x,y,rata,prio){ antri(t,x,y,C.muted,10,rata,prio,false) }
+
+function tempatkanLabel(){
+  if(!labelAntri.length) return;
+  const kotak=[];
+  const tabrak=b=>kotak.some(a=>!(b.x1<=a.x0||b.x0>=a.x1||b.y1<=a.y0||b.y0>=a.y1));
+  labelAntri.sort((a,b)=>b.prio-a.prio);
+  const geser=[0,-13,13,-26,26,-39,39].map(d=>d*FP());
+  for(const L of labelAntri){
+    const uk=L.uk*FP();
+    ctx.font=uk+'px '+(L.mono
+      ? 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+      : 'system-ui, sans-serif');
+    const w=ctx.measureText(L.t).width, h=uk*1.25;
+    const [sx,sy]=keLayar(L.wx,L.wy);
+    const x0 = L.rata==='left' ? sx : L.rata==='right' ? sx-w : sx-w/2;
+    let pakai=null;
+    if(L.prio>=3) pakai=0;
+    else for(const dy of geser){
+      const b={x0:x0-2,x1:x0+w+2,y0:sy+dy-h/2,y1:sy+dy+h/2};
+      if(!tabrak(b)){ pakai=dy; break }
+    }
+    /* bacaan alat ukur terlalu penting untuk disembunyikan; nilai komponen
+       dan tegangan simpul lebih baik mengalah daripada menumpuk */
+    if(pakai===null){ if(L.prio>=2) pakai=geser[geser.length-1]; else continue }
+    const y=sy+pakai;
+    kotak.push({x0:x0-2,x1:x0+w+2,y0:y-h/2,y1:y+h/2});
+    ctx.fillStyle=L.warna; ctx.textAlign=L.rata; ctx.textBaseline='middle';
+    if(L.alfa<1) ctx.globalAlpha=L.alfa;
+    ctx.fillText(L.t,sx,y);
+    if(L.alfa<1) ctx.globalAlpha=1;
+  }
+  labelAntri.length=0;
+}
+/* ===== simbol ==============================================================
+   Semua simbol memakai satu perangkat tetapan: ketebalan garis, ukuran
+   badan, dan jarak label dihitung dari kotak komponen — bukan angka yang
+   dipilih sendiri-sendiri seperti sebelumnya. Tujuannya agar skema terlihat
+   digambar oleh satu tangan.
+   ARTI WARNA (berlaku ketat di kanvas):
+     tembaga = kawat dan badan komponen      emas  = arus dan muatan
+     krem    = tegangan                      teal  = alat ukur
+     biru    = pilihan & kendali (bukan besaran fisis)
+   ========================================================================= */
+/* Mode proyektor: menaikkan ketebalan garis dan ukuran huruf TANPA mengubah
+   ukuran skemanya. Berbeda dari zoom — zoom membesarkan simbol sementara
+   labelnya tetap seukuran layar, jadi di proyektor tulisannya tetap kecil. */
+let proyektor=false;
+const FP=()=>proyektor?1.5:1;
+let skalaGaris=1;              /* dipakai saat menggambar ikon berskala kecil */
+const tbl=v=>v*FP()*skalaGaris;
+const TEBAL=2.4;        /* garis badan komponen */
+const TEBAL_PLAT=3.2;   /* pelat & palang: baterai, kapasitor, basis, katoda */
+const TEBAL_HALUS=1.7;  /* rincian kecil: panah, inti trafo */
+const R_BULAT=15;       /* radius simbol bulat: alat ukur, sumber AC */
+const AMP_GERIGI=9;     /* amplitudo gerigi resistor */
+
+/* label utama di atas badan, label kedua di bawahnya — jaraknya sama untuk
+   semua komponen karena diambil dari kotaknya */
+const kotakDari=k=>JENIS[k.jenis].kotak;
+function labelNama(k){
+  const b=kotakDari(k);
+  tks(namaAlat(k),(b[0]+b[2])/2,b[1]-9,C.ok,11,'center',2);
+}
+function labelAtas(k,t,prio){
+  const b=kotakDari(k); sbl(t,(b[0]+b[2])/2,b[1]-8,'center',prio);
+}
+function labelBawah(k,t,warna,prio){
+  const b=kotakDari(k);
+  if(warna) tks(t,(b[0]+b[2])/2,b[3]+9,warna,11,'center',prio===undefined?1:prio);
+  else      sbl(t,(b[0]+b[2])/2,b[3]+9,'center',prio);
+}
+
+function gSumber(k){
+  garisJalur([[0,-P],[0,-16]],C.copper,TEBAL);
+  garisJalur([[0,16],[0,P]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineCap='round';
+  [[-16,17],[-8,10],[0,17],[8,10]].forEach(([y,w])=>{
+    ctx.lineWidth=tbl(TEBAL_PLAT);ctx.beginPath();ctx.moveTo(-w,y);ctx.lineTo(w,y);ctx.stroke();
+  });
+  sbl('+',-26,-13,'center',3); sbl('−',-26,18,'center',3);
+  labelAtas(k,fmtVolt(k.prop.E));
+}
+function gResistor(k){
+  garisJalur([[-P,0],[-22,0]],C.copper,TEBAL);
+  garisJalur([[22,0],[P,0]],C.copper,TEBAL);
+  const pts=[[-22,0]], n=12;
+  for(let i=1;i<=n;i++) pts.push([-22+44*(i-.5)/n,(i%2?-AMP_GERIGI:AMP_GERIGI)]);
+  pts.push([22,0]); garisJalur(pts,C.copper,TEBAL);
+  labelAtas(k,fmtOhm(k.prop.R));
+}
+function gSaklar(k){
+  garisJalur([[-P,0],[-14,0]],C.copper,TEBAL);
+  garisJalur([[14,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL);
+  [[-14,0],[14,0]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke()});
+  garisJalur(k.prop.tutup?[[-14,0],[14,0]]:[[-14,0],[11,-16]],C.copper,TEBAL);
+  if(ikonMode) return;            /* ikon: simbol saja, tanpa tuas */
+  /* tuas = kendali, bukan besaran fisis -> warna biru */
+  const t=JENIS.saklar.tuas[0], r=px(11);
+  garisJalur([[t.dx,t.dy+r],[0,-16]],'rgba(134,182,222,.45)',px(1.2));
+  ctx.fillStyle=C['panel-dark'];
+  ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.fill();
+  ctx.strokeStyle=k.prop.tutup?C.ok:C.pilih;ctx.lineWidth=px(2);
+  ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.stroke();
+  ctx.lineWidth=px(2.2);
+  ctx.beginPath();
+  if(k.prop.tutup){ ctx.moveTo(t.dx-r*.45,t.dy); ctx.lineTo(t.dx+r*.45,t.dy) }
+  else { ctx.moveTo(t.dx-r*.45,t.dy+r*.35); ctx.lineTo(t.dx+r*.45,t.dy-r*.45) }
+  ctx.stroke();
+}
+function badanTransistor(k,npn){
+  garisJalur([[-P,0],[-10,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL_PLAT);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-10,-17);ctx.lineTo(-10,17);ctx.stroke();
+  garisJalur([[-10,-9],[20,-26]],C.copper,TEBAL);
+  garisJalur([[20,-26],[20,-P]],C.copper,TEBAL);
+  garisJalur([[-10,9],[20,26]],C.copper,TEBAL);
+  garisJalur([[20,26],[20,P]],C.copper,TEBAL);
+  const x1=-10,y1=9,x2=20,y2=26, L=Math.hypot(x2-x1,y2-y1);
+  const ux=(x2-x1)/L, uy=(y2-y1)/L;
+  const [mx,my]=npn?[x1+ux*20,y1+uy*20]:[x1+ux*8,y1+uy*8];
+  const sg=npn?1:-1;
+  ctx.fillStyle=C.copper;
+  ctx.beginPath();
+  ctx.moveTo(mx,my);
+  ctx.lineTo(mx-sg*ux*12-uy*6, my-sg*uy*12+ux*6);
+  ctx.lineTo(mx-sg*ux*12+uy*6, my-sg*uy*12-ux*6);
+  ctx.closePath();ctx.fill();
+  sbl('B',-24,-9,'center',3); sbl('C',30,-30,'center',3); sbl('E',30,30,'center',3);
+  if(terbaca()){
+    const ic=hasil.arusKomp.get(k.id)||0, ib=hasil.arusKomp.get(k.id+'#b')||0;
+    const vce=(hasil.V[hasil.net.petaSimpul.get(k.id+':1')]||0)
+             -(hasil.V[hasil.net.petaSimpul.get(k.id+':2')]||0);
+    const sgv=npn?1:-1;
+    const kerja=Math.abs(ib)<1e-9?'mati':(sgv*vce<0.3?'jenuh':'aktif');
+    labelBawah(k,kerja,kerja==='mati'?C.muted:(kerja==='aktif'?C.ok:C.silk));
+    if(Math.abs(ib)>1e-9){
+      const b=kotakDari(k);
+      tks('Ib '+fmtA(ib),(b[0]+b[2])/2,b[3]+22,C.charge,10);
+      tks('Ic '+fmtA(ic)+'  β '+km(Math.abs(ic/ib),0),(b[0]+b[2])/2,b[3]+34,C.charge,10);
+    }
+  }
+}
+function gNPN(k){ badanTransistor(k,true) }
+function gPNP(k){ badanTransistor(k,false) }
+
+function gPotensio(k){
+  garisJalur([[-P,0],[-22,0]],C.copper,TEBAL);
+  garisJalur([[22,0],[P,0]],C.copper,TEBAL);
+  const pts=[[-22,0]], n=12;
+  for(let i=1;i<=n;i++) pts.push([-22+44*(i-.5)/n,(i%2?-AMP_GERIGI:AMP_GERIGI)]);
+  pts.push([22,0]); garisJalur(pts,C.copper,TEBAL);
+  const kk=Math.min(Math.max(k.prop.pos,0),1);
+  const xw=-22+44*kk;
+  garisJalur([[0,-P],[0,-22]],C.copper,TEBAL);
+  garisJalur([[0,-22],[xw,-13]],C.copper,TEBAL_HALUS);
+  ctx.fillStyle=C.copper;
+  ctx.beginPath();
+  ctx.moveTo(xw,-13); ctx.lineTo(xw-4,-20); ctx.lineTo(xw+4,-20);
+  ctx.closePath(); ctx.fill();
+  labelBawah(k,fmtOhm(k.prop.R));
+  if(ikonMode) return;            /* ikon: simbol saja, tanpa tuas */
+  const r=px(11);
+  JENIS.potensio.tuas.forEach(u=>{
+    ctx.fillStyle=C['panel-dark'];
+    ctx.beginPath();ctx.arc(u.dx,u.dy,r,0,6.2832);ctx.fill();
+    ctx.strokeStyle=C.pilih;ctx.lineWidth=px(2);
+    ctx.beginPath();ctx.arc(u.dx,u.dy,r,0,6.2832);ctx.stroke();
+    ctx.lineWidth=px(2.2);
+    ctx.beginPath();
+    ctx.moveTo(u.dx-r*.45,u.dy); ctx.lineTo(u.dx+r*.45,u.dy);
+    if(u.aksi==='tambah'){ ctx.moveTo(u.dx,u.dy-r*.45); ctx.lineTo(u.dx,u.dy+r*.45) }
+    ctx.stroke();
+  });
+  tks(km(kk*100,0)+'%',0,-52,C.pilih,11,'center',2);
+}
+function gTrafo(k){
+  ctx.lineCap='round';
+  for(const [x,arah] of [[-14,-1],[14,1]]){
+    const ujung=x<0?-P:P;
+    garisJalur([[ujung,-P],[x,-P],[x,-24]],C.copper,TEBAL);
+    garisJalur([[x,24],[x,P],[ujung,P]],C.copper,TEBAL);
+    ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+    for(let i=0;i<4;i++){
+      ctx.beginPath();
+      ctx.arc(x,-18+i*12,6,arah>0?-Math.PI/2:Math.PI/2,arah>0?Math.PI/2:-Math.PI/2,false);
+      ctx.stroke();
+    }
+  }
+  ctx.strokeStyle='rgba(127,160,163,.7)'; ctx.lineWidth=tbl(TEBAL_HALUS);
+  [-4,4].forEach(x=>{ctx.beginPath();ctx.moveTo(x,-26);ctx.lineTo(x,26);ctx.stroke()});
+  sbl('P',-30,-P+9,'center',3); sbl('S',30,-P+9,'center',3);
+  labelBawah(k,'1 : '+km(k.prop.n,k.prop.n<1?3:2));
+}
+function gOpamp(k){
+  garisJalur([[-P,-20],[-24,-20]],C.copper,TEBAL);
+  garisJalur([[-P,20],[-24,20]],C.copper,TEBAL);
+  garisJalur([[24,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL); ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(-24,-28); ctx.lineTo(24,0); ctx.lineTo(-24,28); ctx.closePath();
+  ctx.stroke();
+  sbl('+',-16,-20,'center',3); sbl('−',-16,20,'center',3);
+  labelBawah(k,'±'+km(k.prop.Vsat,0)+' V');
+  if(terbaca()){
+    const vo=hasil.V[hasil.net.petaSimpul.get(k.id+':2')]||0;
+    tks(km(vo,2)+' V',0,-38,C.silk,11,'center',2);
+  }
+}
+
+const WARNA_LED=['#E2564B','#5FC08A','#E9B949','#6FA8DC'];
+function badanDioda(){
+  garisJalur([[-P,0],[-11,0]],C.copper,TEBAL);
+  garisJalur([[11,0],[P,0]],C.copper,TEBAL);
+  ctx.fillStyle=C.copper;
+  ctx.beginPath();ctx.moveTo(-11,-11);ctx.lineTo(11,0);ctx.lineTo(-11,11);
+  ctx.closePath();ctx.fill();
+}
+function gDioda(k){
+  badanDioda();
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL_PLAT);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(11,-11);ctx.lineTo(11,11);ctx.stroke();
+  if(terbaca()){
+    const i=hasil.arusKomp.get(k.id)||0;
+    if(i>1e-6) labelBawah(k,'menghantar');
+    else if(i<-1e-9) labelBawah(k,'menahan');
+  }
+}
+function gLed(k){
+  const w=WARNA_LED[k.prop.warna|0]||WARNA_LED[0];
+  const i=terbaca()?Math.max(hasil.arusKomp.get(k.id)||0,0):0;
+  const nyala=Math.min(Math.sqrt(i/0.02),1.4);
+  if(nyala>0.02){
+    const r=13+16*nyala;
+    const g=ctx.createRadialGradient(0,0,2,0,0,r);
+    g.addColorStop(0,w); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.globalAlpha=Math.min(.16+.5*nyala,.7);
+    ctx.fillStyle=g; ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  badanDioda();
+  ctx.strokeStyle=nyala>0.02?w:C.copper;ctx.lineWidth=tbl(TEBAL_PLAT);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(11,-11);ctx.lineTo(11,11);ctx.stroke();
+  ctx.lineWidth=tbl(TEBAL_HALUS);
+  for(const dx of [-4,3]){
+    ctx.beginPath();ctx.moveTo(dx,-13);ctx.lineTo(dx+6,-20);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+6,-20);ctx.lineTo(dx+2.5,-18.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+6,-20);ctx.lineTo(dx+4.5,-16.5);ctx.stroke();
+  }
+  if(i>1e-5) labelBawah(k,fmtA(i),C.charge);
+}
+function gZener(k){
+  badanDioda();
+  garisJalur([[5,-11],[11,-11],[11,11],[17,11]],C.copper,TEBAL_PLAT);
+  labelAtas(k,km(k.prop.Vz,1)+' V');
+}
+function gSumberAC(k){
+  garisJalur([[0,-P],[0,-R_BULAT]],C.copper,TEBAL);
+  garisJalur([[0,R_BULAT],[0,P]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath();ctx.arc(0,0,R_BULAT,0,6.2832);ctx.stroke();
+  ctx.beginPath();
+  for(let x=-9;x<=9;x+=1) (x===-9?ctx.moveTo:ctx.lineTo).call(ctx,x,-6*Math.sin(x/9*Math.PI));
+  ctx.lineWidth=tbl(TEBAL_HALUS); ctx.stroke();
+  sbl(fmtVolt(k.prop.Vp)+'p',R_BULAT+9,-6,'left');
+  sbl(fmtHz(k.prop.f),R_BULAT+9,7,'left');
+}
+function gSimpul(){
+  ctx.fillStyle=C.copper;
+  ctx.beginPath();ctx.arc(0,0,4,0,6.2832);ctx.fill();
+}
+function bulatan(warna,huruf){
+  ctx.strokeStyle=warna;ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath();ctx.arc(0,0,R_BULAT,0,6.2832);ctx.stroke();
+  tks(huruf,0,0,warna,13,'center',3);
+}
+const terbaca=()=>hasil&&hasil.ok;
+/* penanda kecil: alat ini sedang dikirim ke layar skop */
+function tandaSkop(k){
+  if(!k.prop.skop) return;
+  ctx.strokeStyle=C.pilih; ctx.lineWidth=tbl(TEBAL_HALUS); ctx.lineCap='round';
+  ctx.beginPath();
+  for(let x=-7;x<=7;x+=1){
+    const y=-R_BULAT-8-3.5*Math.sin(x/7*Math.PI);
+    (x===-7?ctx.moveTo:ctx.lineTo).call(ctx,x,y);
+  }
+  ctx.stroke();
+}
+/* Badan alat ukur berwarna teal; ANGKA-nya diwarnai menurut besarannya —
+   emas untuk arus, krem untuk tegangan. */
+function gAmpere(k){
+  garisJalur([[-P,0],[-R_BULAT,0]],C.copper,TEBAL);
+  garisJalur([[R_BULAT,0],[P,0]],C.copper,TEBAL); bulatan(C.ok,'A');
+  if(terbaca()) labelBawah(k,fmtA(hasil.arusKomp.get(k.id)||0),C.charge,2);
+  labelNama(k); tandaSkop(k);
+}
+function gVolt(k){
+  garisJalur([[-P,0],[-R_BULAT,0]],C.copper,TEBAL);
+  garisJalur([[R_BULAT,0],[P,0]],C.copper,TEBAL); bulatan(C.ok,'V');
+  if(terbaca()) labelBawah(k,km(nilaiAlat(k),2)+' V',C.silk,2);
+  labelNama(k); tandaSkop(k);
+}
+function gProbe(k){
+  ctx.strokeStyle=C.ok;ctx.lineWidth=tbl(TEBAL);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(13,-21);ctx.stroke();
+  ctx.lineWidth=tbl(TEBAL_PLAT+1.5);ctx.beginPath();ctx.moveTo(13,-21);ctx.lineTo(25,-33);ctx.stroke();
+  if(terbaca()) tks(km(nilaiAlat(k),2)+' V',29,-34,C.silk,11,'left',2);
+  tks(namaAlat(k),29,-21,C.ok,11,'left',2);
+}
+function gKapasitor(k){
+  garisJalur([[-P,0],[-6,0]],C.copper,TEBAL); garisJalur([[6,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL_PLAT); ctx.lineCap='butt';
+  ctx.beginPath();ctx.moveTo(-6,-15);ctx.lineTo(-6,15);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(6,-15);ctx.lineTo(6,15);ctx.stroke();
+  const v=keadaan.has(k.id)?keadaan.get(k.id):0;
+  const puncak=Math.max(vMaks.get(k.id)||0,Math.abs(v),1e-9);
+  const isi=Math.min(Math.abs(v)/puncak,1);
+  if(isi>0.02){
+    const al=0.3+0.7*isi;
+    antri(v>=0?'+':'−',-16,-9,C.charge,14,'center',3,true,al);
+    antri(v>=0?'−':'+', 16,-9,C.charge,14,'center',3,true,al);
+  }
+  labelAtas(k,fmtF(k.prop.C));
+  if(Math.abs(v)>1e-4) labelBawah(k,km(v,2)+' V',C.silk);
+}
+function gInduktor(k){
+  garisJalur([[-P,0],[-24,0]],C.copper,TEBAL);
+  garisJalur([[24,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL); ctx.lineCap='round';
+  for(let i=0;i<4;i++){
+    ctx.beginPath();
+    ctx.arc(-18+i*12,0,6,Math.PI,0,false);
+    ctx.stroke();
+  }
+  labelAtas(k,fmtH(k.prop.L));
+}
+function gMassa(){
+  garisJalur([[0,-20],[0,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineCap='round';
+  [[13,0],[8,6],[4,12]].forEach(([w,y])=>{
+    ctx.lineWidth=tbl(TEBAL);ctx.beginPath();ctx.moveTo(-w,y);ctx.lineTo(w,y);ctx.stroke();
+  });
+}
+/* Ikon dibuat dengan MEMANGGIL fungsi simbol yang sama seperti di skema,
+   bukan menggambar ulang bentuk terpisah. Jadi ikon dijamin selalu sama
+   dengan simbol aslinya, termasuk kalau simbolnya nanti diubah. */
+function gambarIkon(jenis,kanvas,lebar,tinggi){
+  const def=JENIS[jenis];
+  const c=kanvas.getContext('2d');
+  const dpr=Math.min(devicePixelRatio||1,2.5);
+  kanvas.width=Math.round(lebar*dpr); kanvas.height=Math.round(tinggi*dpr);
+  const simpan={ctx,zoom,hasil,proyektor,ikonMode,skalaGaris,kompAktif};
+  ctx=c; hasil=null; proyektor=false; ikonMode=true; kompAktif=null;
+  const b=def.kotak, w=Math.max(b[2]-b[0],1), h=Math.max(b[3]-b[1],1);
+  const sk=Math.min((lebar-8)/w,(tinggi-8)/h,0.62);
+  zoom=sk; skalaGaris=1/sk;          /* garis tetap setebal semestinya di layar */
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,lebar,tinggi);
+  c.save();
+  c.translate(lebar/2,tinggi/2); c.scale(sk,sk);
+  c.translate(-(b[0]+b[2])/2,-(b[1]+b[3])/2);
+  try{
+    def.gambar({id:'#ikon',jenis,x:0,y:0,rot:0,
+                prop:Object.assign({},def.prop),pin:def.pin.map(()=>0)});
+  }catch(_){ /* satu ikon gagal tidak boleh menjatuhkan palet */ }
+  c.restore();
+  ctx=simpan.ctx; zoom=simpan.zoom; hasil=simpan.hasil;
+  proyektor=simpan.proyektor; ikonMode=simpan.ikonMode;
+  skalaGaris=simpan.skalaGaris; kompAktif=simpan.kompAktif;
+}
+
+function kotakKomponen(k,warna,tebal,putus){
+  const [x0,y0,x1,y1]=JENIS[k.jenis].kotak, pad=px(PAD_BADAN);
+  ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.rot*Math.PI/2);
+  if(k.cx) ctx.scale(-1,1);
+  ctx.strokeStyle=warna; ctx.lineWidth=tebal;
+  if(putus) ctx.setLineDash([px(5),px(4)]);
+  ctx.strokeRect(x0-pad,y0-pad,(x1-x0)+pad*2,(y1-y0)+pad*2);
+  ctx.setLineDash([]); ctx.restore();
+}
+
+const geser=new Map(); const SPASI=20, K_LAJU=1100, LAJU_MAKS=300;
+function panjang(pts){let t=0;for(let i=0;i<pts.length-1;i++)
+  t+=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);return t}
+function titikDi(pts,d){
+  let s=d;
+  for(let i=0;i<pts.length-1;i++){
+    const dx=pts[i+1][0]-pts[i][0],dy=pts[i+1][1]-pts[i][1],L=Math.hypot(dx,dy);
+    if(s<=L) return [pts[i][0]+dx/L*s, pts[i][1]+dy/L*s];
+    s-=L;
+  }
+  return pts[pts.length-1];
+}
+function muatan(pts,off){
+  const t=panjang(pts); if(t<1) return;
+  ctx.fillStyle=C.charge;
+  for(let d=((off%SPASI)+SPASI)%SPASI;d<t;d+=SPASI){
+    const [x,y]=titikDi(pts,d);
+    ctx.beginPath();ctx.arc(x,y,2.6*FP(),0,6.2832);ctx.fill();
+  }
+}
+/* penanda genggam di tengah tiap segmen kawat terpilih */
+function genggamKawat(pts){
+  for(let j=0;j<pts.length-1;j++){
+    const [ax,ay]=pts[j],[bx,by]=pts[j+1];
+    const L=Math.hypot(bx-ax,by-ay); if(L<16) continue;
+    const mx=(ax+bx)/2, my=(ay+by)/2, tegak=Math.abs(bx-ax)<1e-6;
+    const r=px(5.5);
+    ctx.strokeStyle=C.pilih; ctx.lineWidth=px(1.8);
+    for(const o of [-r,r]){
+      ctx.beginPath();
+      if(tegak){ctx.moveTo(mx+o,my-r);ctx.lineTo(mx+o,my+r)}
+      else     {ctx.moveTo(mx-r,my+o);ctx.lineTo(mx+r,my+o)}
+      ctx.stroke();
+    }
+  }
+}
+
+function gambar(){
+  labelAntri.length=0;
+  ctx.save();
+  ctx.fillStyle=C['panel-dark'];ctx.fillRect(0,0,lebarCSS,tinggiCSS);
+  ctx.translate(-pan.x*zoom,-pan.y*zoom); ctx.scale(zoom,zoom);
+
+  const x0=bulat(pan.x)-KISI, y0=bulat(pan.y)-KISI;
+  const x1=pan.x+lebarCSS/zoom+KISI, y1=pan.y+tinggiCSS/zoom+KISI;
+  ctx.fillStyle='rgba(127,160,163,.20)';
+  const sp=px(1.2);
+  for(let x=x0;x<x1;x+=KISI) for(let y=y0;y<y1;y+=KISI) ctx.fillRect(x-sp/2,y-sp/2,sp,sp);
+
+  const mati=!hidup||!hasil||!hasil.ok;
+  const wk=mati?'rgba(184,115,51,.45)':C.copper;
+
+  M.kawat.forEach((w,i)=>{
+    const p=posPinKunci(w.a),q=posPinKunci(w.b); if(!p||!q) return;
+    w.jalur=jalurKawat(w,p,q);
+    const dipl=i===pilihKawat, hov=sorot&&sorot.t==='kawat'&&sorot.i===i;
+    garisJalur(w.jalur, dipl?C.pilih:(hov?C.silk:wk), dipl?3.6:2.4);
+  });
+  if(!mati){
+    M.kawat.forEach((w,i)=>{
+      const I=hasil.arusKawat.get(i)||0;
+      muatan(Math.sign(I)>=0?w.jalur:[...w.jalur].reverse(), geser.get('w'+i)||0);
+    });
+    for(const k of M.komponen){
+      if(k.pin.length<2) continue;
+      let p,q,I;
+      if(k.jenis==='npn'||k.jenis==='pnp'){
+        /* jalur utama transistor adalah kolektor -> emitor */
+        I=hasil.arusKomp.get(k.id)||0; p=posPin(k,1); q=posPin(k,2);
+      }else if(k.jenis==='trafo'){
+        I=hasil.arusKomp.get(k.id+'#s')||0; p=posPin(k,2); q=posPin(k,3);
+      }else if(k.jenis==='potensio'){
+        I=hasil.arusKomp.get(k.id+'#a')||0; p=posPin(k,0); q=posPin(k,2);
+      }else if(k.jenis==='opamp'){
+        continue;
+      }else{
+        I=hasil.arusKomp.get(k.id)||0; p=posPin(k,0); q=posPin(k,1);
+      }
+      muatan(Math.sign(I)>=0?[p,q]:[q,p], geser.get(k.id)||0);
+    }
+  }
+  if(pilihKawat>=0&&M.kawat[pilihKawat]) genggamKawat(M.kawat[pilihKawat].jalur||[]);
+
+  if(sorot&&sorot.t==='badan') kotakKomponen(sorot.k,'rgba(232,226,208,.35)',px(1.2),false);
+  if(modeTampil&2) for(const k of M.komponen) kotakKomponen(k,'rgba(99,164,140,.5)',px(1),false);
+
+  for(const k of M.komponen){
+    ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.rot*Math.PI/2);
+    if(k.cx) ctx.scale(-1,1);
+    kompAktif=k;                      /* agar label tahu cara memutar posisinya */
+    JENIS[k.jenis].gambar(k);
+    kompAktif=null;
+    ctx.restore();
+  }
+  for(const k of M.komponen) k.pin.forEach((_,i)=>{
+    const [x,y]=posPin(k,i);
+    ctx.fillStyle=C.copper;
+    ctx.beginPath();ctx.arc(x,y,px(3*FP()),0,6.2832);ctx.fill();
+  });
+  if(dipilih) kotakKomponen(dipilih,C.pilih,px(1.5),true);
+
+  for(const k of peganganAktif()) k.pin.forEach((_,i)=>{
+    const kunci=k.id+':'+i;
+    const [pxx,pyy]=posPin(k,i), [hx,hy]=posPegangan(k,i);
+    const aktif=pinTertunda===kunci;
+    const hov=sorot&&sorot.t==='pegangan'&&sorot.kunci===kunci;
+    if(JAUH_PEGANGAN>0) garisJalur([[pxx,pyy],[hx,hy]],'rgba(134,182,222,.5)',px(1.4));
+    const r=px((hov||aktif?11:9)*FP());
+    ctx.fillStyle=aktif?C.pilih:C['panel-dark'];
+    ctx.beginPath();ctx.arc(hx,hy,r,0,6.2832);ctx.fill();
+    ctx.strokeStyle=C.pilih;ctx.lineWidth=px(aktif?3:2);
+    ctx.beginPath();ctx.arc(hx,hy,r,0,6.2832);ctx.stroke();
+    tks(String(i+1),hx,hy,aktif?C['panel-dark']:C.pilih,10,'center',3);
+  });
+
+  if((modeTampil&1)&&!mati){
+    const sudah=new Set();
+    for(const k of M.komponen) k.pin.forEach((_,i)=>{
+      const n=hasil.net.petaSimpul.get(k.id+':'+i);
+      if(n===undefined||sudah.has(n)) return;
+      sudah.add(n);
+      const [x,y]=posPin(k,i);
+      tks(km(hasil.V[n],2)+' V', x+11/zoom, y-15/zoom, C.silk,10,'left',0);
+    });
+    for(const k of M.komponen){
+      if(k.pin.length<2||k.jenis==='volt'||k.jenis==='ampere'||k.jenis==='opamp'
+         ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio') continue;
+      const [x,y]=putar(k,0,JENIS[k.jenis].kotak[3]);
+      tks(fmtA(hasil.arusKomp.get(k.id)||0), x, y+px(13), C.silk,10);
+    }
+  }
+  ctx.restore();
+  /* seluruh label digambar di sini, di ruang layar: tegak, berukuran tetap,
+     dan sudah saling menghindar */
+  tempatkanLabel();
+
+  /* penunjuk waktu simulasi — hanya berarti bila ada kapasitor/induktor */
+  if(perluWaktu(M)){
+    ctx.font=(11*FP())+'px ui-monospace, monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillStyle=hidup?C.silk:C.muted;
+    ctx.fillText('t = '+fmtWaktu(tSim)+'   ×'+km(SKALA[iSkala],2).replace(',00','')+
+      ((hasil&&hasil.terpotong)?'  (hitungan tertinggal)':'')+
+      ((hasil&&hasil.gagal)?'   iterasi belum konvergen: '+hasil.gagal+' langkah':'')+
+      (jeda?'   — JEDA':''),10,10);
+  }
+}
+
+/* ==========================================================================
+   7. FORMAT
+   ========================================================================== */
+/* Jaring pengaman: satu nilai bukan-angka pernah mematikan seluruh putaran
+   gambar lewat undefined.toFixed. Lebih baik menampilkan 0 daripada mati. */
+const km=(x,d)=>(Number.isFinite(x)?x:0).toFixed(d).replace('.',',');
+const fmtOhm=r=>r>=1000?km(r/1000,r%1000?1:0)+' kΩ':r+' Ω';
+/* diminta: kapasitor paling besar tampil dalam µF, jangan mF */
+const fmtF=c=>c<1?km(c*1000,0)+' nF':km(c,c<10?1:0)+' µF';
+const fmtHz=f=>f>=1000?km(f/1000,f%1000?1:0)+' kHz':km(f,f<10?1:0)+' Hz';
+/* diminta: induktor paling besar tampil dalam mH, jangan H */
+const fmtH=l=>km(l,l<10?1:0)+' mH';
+function fmtWaktu(t){
+  if(t<1e-3) return km(t*1e6,1)+' µs';
+  if(t<1) return km(t*1e3,2)+' ms';
+  return km(t,3)+' s';
+}
+function fmtA(i){
+  const a=Math.abs(i);
+  if(a<1e-10) return '0 A';
+  if(a<1e-6)  return km(i*1e9,a<1e-8?1:0)+' nA';
+  if(a<1e-3)  return km(i*1e6,a<1e-5?1:0)+' µA';
+  if(a<1)     return km(i*1000,a<1e-2?2:1)+' mA';
+  return km(i,3)+' A';
+}
+const fmtVolt=v=>Math.abs(v)<1?km(v*1000,Math.abs(v*1000)<10?1:0)+' mV'
+                             :km(v,Math.abs(v)<10?1:0)+' V';
+
+/* ==========================================================================
+   8. LEMBAR BAWAH
+   ========================================================================== */
+const sheet=document.getElementById('sheet'), pegangEl=document.getElementById('pegang');
+const elKet=document.getElementById('ket'), elTanda=document.getElementById('tanda');
+const elIns=document.getElementById('sIns');
+const bukaSheet=b=>{sheet.classList.toggle('buka',b);elTanda.textContent=b?'▼':'▲'};
+pegangEl.addEventListener('click',()=>bukaSheet(!sheet.classList.contains('buka')));
+/* Memilih TIDAK membuka panel. Panel hanya terbuka oleh ketukan ganda
+   atau oleh tombol panah di batang pegangan. */
+function pilihKomp(k){dipilih=k;pilihKawat=-1;gambarIns()}
+function pilihWire(i){pilihKawat=i;dipilih=null;gambarIns()}
+
+function gambarIns(){
+  elIns.innerHTML='';
+  if(pilihKawat>=0&&M.kawat[pilihKawat]){
+    const w=M.kawat[pilihKawat];
+    elIns.innerHTML='<p class="lbl">Kawat</p><p class="kosong">'+
+      namaPin(w.a)+' ↔ '+namaPin(w.b)+'<br>Geser badan kawatnya di kanvas untuk '+
+      'memindahkan jalur; segmen tegak bergeser mendatar, segmen datar bergeser tegak.</p>';
+    const baris=document.createElement('div');
+    baris.style.cssText='display:flex;gap:8px;margin-top:11px';
+    const br=document.createElement('button'); br.textContent='Rapikan jalur'; br.style.flex='1';
+    br.addEventListener('click',()=>{
+      rekam(); delete w.orient; delete w.m; gambarIns();
+    });
+    const bh=document.createElement('button'); bh.textContent='Hapus kawat'; bh.style.flex='1';
+    bh.style.borderColor=C.hot; bh.style.color=C.hot;
+    bh.addEventListener('click',()=>{rekam();M.kawat.splice(pilihKawat,1);pilihWire(-1);segarkan()});
+    baris.append(br,bh); elIns.appendChild(baris);
+    elKet.textContent='Kawat terpilih'; return;
+  }
+  if(!dipilih){
+    elKet.textContent='Ketuk komponen untuk memilihnya';
+    elIns.innerHTML='<p class="lbl">Belum ada yang dipilih</p>'+
+      '<p class="kosong">Ketuk komponen untuk memilih; <b>ketuk dua kali</b> untuk '+
+      'membuka panel ini. Setelah terpilih, muncul pegangan <b>①</b> dan <b>②</b> di '+
+      'titik pin — dari situ kawat ditarik. Saat menyambung, ketuk sebuah kawat untuk '+
+      'membuat <b>titik cabang</b>. Tuas saklar ditekan langsung di kanvas. '+
+      'Sekali ketuk pada alat ukur membuka layar osiloskop di atas, tanpa panel ini.</p>'+
+      '<p class="lbl" style="margin:14px 0 5px">Nama rangkaian</p>'+
+      '<input type="text" id="inNamaProyek" maxlength="60" value="'+
+        String(namaProyek).replace(/"/g,'&quot;')+'">'+
+      '<p class="kosong" style="margin-top:5px">Dipakai sebagai nama berkas saat disimpan.</p>'+
+      '<p class="lbl" style="margin:14px 0 7px">Arti warna</p>'+
+      '<p class="kosong" style="line-height:1.9">'+
+      '<i style="display:inline-block;width:13px;height:3px;background:'+C.copper+
+        ';vertical-align:middle;margin-right:7px"></i>kawat &amp; badan komponen<br>'+
+      '<i style="display:inline-block;width:13px;height:3px;background:'+C.charge+
+        ';vertical-align:middle;margin-right:7px"></i>arus dan muatan<br>'+
+      '<i style="display:inline-block;width:13px;height:3px;background:'+C.silk+
+        ';vertical-align:middle;margin-right:7px"></i>tegangan<br>'+
+      '<i style="display:inline-block;width:13px;height:3px;background:'+C.ok+
+        ';vertical-align:middle;margin-right:7px"></i>alat ukur<br>'+
+      '<i style="display:inline-block;width:13px;height:3px;background:'+C.pilih+
+        ';vertical-align:middle;margin-right:7px"></i>pilihan &amp; kendali</p>';
+    const inNm=document.getElementById('inNamaProyek');
+    if(inNm) inNm.addEventListener('change',()=>{
+      namaProyek=inNm.value.trim()||namaProyek; inNm.value=namaProyek;
+    });
+    return;
+  }
+  const def=JENIS[dipilih.jenis];
+  elKet.textContent=def.nama+' terpilih';
+  const jd=document.createElement('p'); jd.className='lbl';
+  jd.textContent=def.nama+' · '+dipilih.id; elIns.appendChild(jd);
+
+  /* Voltmeter dan amperemeter tidak otomatis menjadi kanal skop. Ia
+     diaktifkan dari sini — sengaja lewat tombol tersendiri, bukan lewat
+     daftar sifat, supaya jelas bahwa ini menyalakan perekaman. */
+  if(dipilih.jenis==='volt'||dipilih.jenis==='ampere'){
+    const bs=document.createElement('button');
+    bs.style.cssText='width:100%;margin-bottom:12px';
+    const pasang=()=>{
+      bs.textContent=dipilih.prop.skop?'▲ Tampil di skop — aktif':'Tampilkan di skop';
+      bs.setAttribute('aria-pressed',String(!!dipilih.prop.skop));
+    };
+    pasang();
+    bs.addEventListener('click',()=>{
+      rekam();
+      dipilih.prop.skop=dipilih.prop.skop?0:1;
+      if(dipilih.prop.skop) bukaScope(true);
+      else { jejak.delete(dipilih.id); setelanKanal.delete(dipilih.id) }
+      sigCtl=''; pasang(); segarkan();
+    });
+    elIns.appendChild(bs);
+  }
+
+  def.field.forEach(f=>{
+    const box=document.createElement('div'); box.className='fld';
+    const nm=document.createElement('span'); nm.className='nm'; nm.textContent=f.nm;
+    box.appendChild(nm);
+    if(f.jenis==='angka'){
+      const duo=document.createElement('div'); duo.className='duo';
+      const inp=document.createElement('input');
+      inp.type='number';inp.min=f.min;inp.max=f.max;inp.step=f.step;inp.value=dipilih.prop[f.k];
+      const sat=document.createElement('span'); sat.className='sat'; sat.textContent=f.sat||'';
+      duo.append(inp,sat); box.appendChild(duo);
+      const sl=document.createElement('input');
+      sl.type='range';
+      /* Rentang selebar 1 Ω .. 10 MΩ mustahil diatur dengan geseran linear:
+         setengah pertama geseran hanya mencakup 5 ohm. Karena itu geserannya
+         logaritmik, sedangkan kotak angkanya tetap bebas diketik. */
+      const lo=Math.log10(Math.max(f.min,1e-9)), hi=Math.log10(f.max);
+      const keGeser=v=>Math.round((Math.log10(Math.min(Math.max(v,f.min),f.max))-lo)/(hi-lo)*1000);
+      const dariGeser=g=>{
+        const v=Math.pow(10,lo+(hi-lo)*g/1000);
+        const p=Math.pow(10,Math.floor(Math.log10(v))-1);
+        return Math.max(Math.round(v/p)*p,f.min);      /* 2 angka berarti */
+      };
+      if(f.log){ sl.min=0; sl.max=1000; sl.step=1; sl.value=keGeser(dipilih.prop[f.k]) }
+      else { sl.min=f.min; sl.max=f.max; sl.step=f.step; sl.value=dipilih.prop[f.k] }
+      box.appendChild(sl);
+      inp.addEventListener('change',()=>{
+        const n=Math.min(Math.max(parseFloat(inp.value)||0,f.min),f.max);
+        rekam(); dipilih.prop[f.k]=n; segarkan(); gambarIns();
+      });
+      sl.addEventListener('input',()=>{
+        const v=f.log?dariGeser(+sl.value):parseFloat(sl.value);
+        dipilih.prop[f.k]=v; inp.value=v; segarkan();
+      });
+      sl.addEventListener('change',()=>{rekam();gambarIns()});
+    }else if(f.jenis==='teks'){
+      const inp=document.createElement('input');
+      inp.type='text'; inp.value=dipilih.prop[f.k]||'';
+      inp.setAttribute('maxlength','14');
+      inp.addEventListener('change',()=>{
+        rekam();
+        dipilih.prop[f.k]=inp.value.trim()||namaBaru(dipilih.jenis);
+        inp.value=dipilih.prop[f.k];
+        sigCtl=''; segarkan(); gambarIns();
+      });
+      box.appendChild(inp);
+    }else{
+      const sel=document.createElement('select');
+      /* Dulu daftar nilai selalu diformat sebagai ohm, sehingga kapasitor
+         dan induktor pun tampil "Ω". Sekarang tiap field menyebut satuannya. */
+      const fmtOpsi=FMT_OPSI[f.fmt]||fmtOhm;
+      f.opsi.forEach(o=>{
+        const v=(typeof o==='object')?o.v:o, t=(typeof o==='object')?o.t:fmtOpsi(o);
+        const op=document.createElement('option'); op.value=v; op.textContent=t;
+        if(+dipilih.prop[f.k]===+v) op.selected=true;
+        sel.appendChild(op);
+      });
+      sel.addEventListener('change',()=>{
+        rekam(); dipilih.prop[f.k]=parseFloat(sel.value);
+        segarkan(); gambarIns();
+      });
+      box.appendChild(sel);
+    }
+    elIns.appendChild(box);
+  });
+
+  const nmP=document.createElement('span'); nmP.className='nm';
+  nmP.textContent='Sambungkan dari pin'; elIns.appendChild(nmP);
+  const pb=document.createElement('div'); pb.className='pinbar';
+  dipilih.pin.forEach((_,i)=>{
+    const b=document.createElement('button');
+    b.textContent='Pin '+(i+1);
+    const kunci=dipilih.id+':'+i;
+    if(pinTertunda===kunci) b.setAttribute('aria-pressed','true');
+    b.addEventListener('click',()=>{
+      pinTertunda = pinTertunda===kunci ? null : kunci;
+      kabar(); gambarIns();
+    });
+    pb.appendChild(b);
+  });
+  elIns.appendChild(pb);
+
+  const nmA=document.createElement('span'); nmA.className='nm';
+  nmA.textContent='Pindah selangkah kisi'; elIns.appendChild(nmA);
+  const ar=document.createElement('div'); ar.className='arah';
+  [['←',-KISI,0],['→',KISI,0],['↑',0,-KISI],['↓',0,KISI]].forEach(([t,dx,dy])=>{
+    const b=document.createElement('button'); b.textContent=t;
+    b.addEventListener('click',()=>{rekam();dipilih.x+=dx;dipilih.y+=dy;segarkan()});
+    ar.appendChild(b);
+  });
+  elIns.appendChild(ar);
+
+  const aksiEl=document.createElement('div');
+  aksiEl.style.cssText='display:flex;gap:8px;margin-top:11px';
+  const bp=document.createElement('button'); bp.style.flex='1';
+  bp.innerHTML='<svg class="ik" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-8-8"/>'+
+    '<path d="M12 1.5V6.5L16 4"/></svg><span>Putar 90°</span>';
+  bp.addEventListener('click',()=>{rekam();dipilih.rot=(dipilih.rot+1)%4;segarkan()});
+  /* Cermin tegak = cermin datar + putar 180 derajat, jadi cukup satu penanda. */
+  const nmC=document.createElement('span'); nmC.className='nm';
+  nmC.textContent='Cermin'; elIns.appendChild(nmC);
+  const cr=document.createElement('div'); cr.className='arah';
+  cr.style.gridTemplateColumns='1fr 1fr';
+  [['⇄','datar'],['⇅','tegak']].forEach(([t,arah])=>{
+    const b=document.createElement('button');
+    b.innerHTML='<span style="font-size:17px">'+t+'</span>';
+    b.title='Cermin '+arah;
+    b.addEventListener('click',()=>{
+      rekam();
+      dipilih.cx=dipilih.cx?0:1;
+      if(arah==='tegak') dipilih.rot=(dipilih.rot+2)%4;
+      segarkan();
+    });
+    cr.appendChild(b);
+  });
+  elIns.appendChild(cr);
+  const bh=document.createElement('button'); bh.style.flex='1';
+  bh.innerHTML='<svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/>'+
+    '<path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg><span>Hapus</span>';
+  bh.style.borderColor=C.hot; bh.style.color=C.hot;
+  bh.addEventListener('click',()=>{rekam();hapusKomponen(dipilih.id);pilihKomp(null);segarkan()});
+  aksiEl.append(bp,bh); elIns.appendChild(aksiEl);
+}
+
+function gambarUkur(){
+  const el=document.getElementById('isiUkur');
+  const pr=M.komponen.filter(k=>k.jenis==='probe');
+  const vm=M.komponen.filter(k=>k.jenis==='volt');
+  const am=M.komponen.filter(k=>k.jenis==='ampere');
+  if(!pr.length&&!vm.length&&!am.length){
+    el.innerHTML='<p class="kosong">Belum ada alat ukur.</p>'; return;
+  }
+  const sim=k=>hasil?hasil.net.petaSimpul.get(k):undefined;
+  const V=n=>(hasil&&hasil.ok&&n!==undefined)?km(hasil.V[n],2)+' V':'—';
+  let b='';
+  pr.forEach(k=>b+=`<tr><td>${namaAlat(k)}</td><td>ke massa</td><td class="mono">${V(sim(k.id+':0'))}</td></tr>`);
+  vm.forEach(k=>{
+    const a=sim(k.id+':0'),c=sim(k.id+':1');
+    const v=(hasil&&hasil.ok&&a!==undefined&&c!==undefined)?km(hasil.V[a]-hasil.V[c],2)+' V':'—';
+    b+=`<tr><td>${namaAlat(k)}</td><td>pin 1 → 2</td><td class="mono">${v}</td></tr>`;
+  });
+  am.forEach(k=>{
+    const i=(hasil&&hasil.ok)?fmtA(hasil.arusKomp.get(k.id)||0):'—';
+    b+=`<tr><td>${namaAlat(k)}</td><td>arus jalur</td><td class="mono">${i}</td></tr>`;
+  });
+  el.innerHTML='<table><thead><tr><th>Alat</th><th>Acuan</th><th>Nilai</th></tr></thead><tbody>'+b+'</tbody></table>';
+}
+
+/* ==========================================================================
+   8b. OSILOSKOP — setiap kanal diskalakan sendiri (seperti gain per kanal
+       pada osiloskop nyata), karena volt dan ampere tak bisa satu sumbu.
+   ========================================================================== */
+const sc=document.getElementById('scope'), sctx=sc.getContext('2d');
+const skopbar=document.getElementById('skopbar');
+const bSkop=document.getElementById('bSkop');
+function bukaScope(b){
+  skopbar.classList.toggle('buka',b);
+  bSkop.setAttribute('aria-pressed',String(b));
+}
+bSkop.addEventListener('click',()=>bukaScope(!skopbar.classList.contains('buka')));
+document.getElementById('bSkopTutup').addEventListener('click',()=>bukaScope(false));
+let scL=0,scT=0;
+
+/* basis waktu, seperti kenop TIME/DIV. 0 = seluruh rekaman. */
+/* Basis waktu bergaya osiloskop: urutan 1-2-5 dari 100 µs sampai 5 s, plus
+   "Semua" untuk melihat seluruh rekaman. Diatur dengan panah kiri/kanan,
+   bukan satu tombol yang harus diputar melewati semua nilai. */
+const JENDELA=[0,5,2,1,.5,.2,.1,.05,.02,.01,.005,.002,.001,.0005,.0002,.0001];
+let iJendela=0;
+const labelJendela=()=>{};
+/* Penggeser sinyal kiri-kanan, dalam satuan divisi dan BERNILAI PECAHAN.
+   Osiloskop nyata memakai potensiometer, jadi langkah satu divisi terlalu
+   kasar untuk menempatkan puncak gelombang tepat di garis kisi. */
+let posDivT=0;
+const GESER_MAKS=40;       /* divisi ke belakang yang bisa dijangkau kenop.
+                              Menentukan kehalusan PELUNCUR: jangkauan dibagi
+                              lebar peluncur. 40 -> ~0,3 divisi per piksel. */
+const LANGKAH_HALUS=0.01;  /* langkah tombol ◀ ▶ dan ▼ ▲, dalam divisi */
+
+/* ===== setelan tiap kanal: VOLTS/DIV dan POSITION ========================
+   Tanpa keduanya, sinyal 20 mV di samping sinyal 4 V hanya tampak sebagai
+   garis lurus — persis keluhan pada rangkaian penguat. Kisi 8 divisi tegak
+   mengikuti kebiasaan osiloskop.
+   ========================================================================= */
+/* Dua deret skala, karena kanal amperemeter bersatuan ampere. Kisi skop
+   tidak berlabel nilai mutlak — tiap kanal membawa labelnya sendiri —
+   sehingga mencampur satuan tetap terbaca, seperti osiloskop dengan probe
+   arus. */
+const VDIV_V=[.0005,.001,.002,.005,.01,.02,.05,.1,.2,.5,1,2,5,10,20,50];
+const VDIV_A=[1e-6,2e-6,5e-6,1e-5,2e-5,5e-5,1e-4,2e-4,5e-4,
+              1e-3,2e-3,5e-3,1e-2,2e-2,5e-2,.1,.2,.5,1,2,5];
+const NDIV_Y=8, NDIV_X=10;
+const setelanKanal=new Map();               /* id -> {iv,pos,ac,sat} */
+const deret=st=>(st&&st.sat==='A')?VDIV_A:VDIV_V;
+const iVdivUntuk=(v,arr)=>{
+  if(!Number.isFinite(v)||v<=0) return 0;      /* jangan sampai memilih skala terbesar */
+  for(let i=0;i<arr.length;i++) if(arr[i]>=v) return i;
+  return arr.length-1;
+};
+function fmtVdiv(v,sat){
+  if(sat==='A'){
+    if(v<1e-3) return km(v*1e6,v*1e6<10?1:0)+' µA/div';
+    if(v<1)    return km(v*1e3,v*1e3<10?1:0)+' mA/div';
+    return km(v,v<10?1:0)+' A/div';
+  }
+  return (v<1 ? km(v*1000,v*1000<10?1:0)+' mV' : km(v,v<10?1:0)+' V')+'/div';
+}
+const fmtNilai=(v,sat)=>sat==='A'?fmtA(v):km(v,3)+' V';
+const FMT_OPSI={ohm:fmtOhm,farad:fmtF,henry:fmtH,volt:fmtVolt,hz:fmtHz};
+/* Sebar kanal ke jatah divisinya masing-masing supaya tidak tumpang tindih,
+   lalu pilih V/div supaya ayunannya mengisi jatah itu. */
+function idealKanal(k,i,n){
+  const jatah=NDIV_Y/n, arr=k.sat==='A'?VDIV_A:VDIV_V;
+  const ayun=k.maks-k.min;
+  const acuan = ayun>1e-9 ? ayun : Math.max(Math.abs((k.maks+k.min)/2),arr[0]*2);
+  const iv=iVdivUntuk(acuan/(jatah*0.7),arr);
+  const tengah=(k.maks+k.min)/2;
+  return {iv,pos:((n-1)/2-i)*jatah-tengah/arr[iv],jatah};
+}
+/* Selama kenopnya belum disentuh, kanal terus mengikuti sinyalnya. Ini yang
+   memperbaiki gejala "semua kanal 0,5 mV/div": skala pertama dihitung saat
+   jejaknya masih dua titik dan ayunannya nol, lalu dulu tidak pernah
+   dihitung ulang. Ada histeresis supaya tidak berganti-ganti setiap bingkai. */
+function selaraskanKanal(daftar){
+  const n=daftar.length||1;
+  daftar.forEach((k,i)=>{
+    const id=idealKanal(k,i,n);
+    let st=setelanKanal.get(k.id);
+    if(!st){ setelanKanal.set(k.id,{iv:id.iv,pos:id.pos,auto:true,ac:false,sat:k.sat}); return }
+    st.sat=k.sat;
+    if(!st.auto) return;
+    const arr=deret(st);
+    const tinggi=(k.maks-k.min)/arr[st.iv];
+    if(tinggi>id.jatah*0.92 || tinggi<id.jatah*0.22) st.iv=id.iv;
+    const tengah=st.ac?0:(k.maks+k.min)/2;
+    st.pos=((n-1)/2-i)*id.jatah-tengah/arr[st.iv];
+  });
+}
+const WARNA_KANAL=[C.ok,C.silk,C.charge,'#8FB8D8'];
+
+/* ---- kendali per kanal di bawah layar ---- */
+const elCtl=document.getElementById('skopctl');
+let sigCtl='';
+elCtl.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const id=b.dataset.id, aksi=b.dataset.aksi;
+  if(aksi==='auto'){ setelanKanal.clear(); sigCtl=''; return }
+  if(aksi==='picu'){ picuAktif=!picuAktif; sigCtl=''; return }
+  if(aksi==='tkurang'){ iJendela=Math.min(iJendela+1,JENDELA.length-1); sigCtl=''; return }
+  if(aksi==='ttambah'){ iJendela=Math.max(iJendela-1,0); sigCtl=''; return }
+  if(aksi==='pkiri'){  posDivT=Math.min(posDivT+LANGKAH_HALUS,GESER_MAKS); return }
+  if(aksi==='pkanan'){ posDivT=Math.max(posDivT-LANGKAH_HALUS,0); return }
+  if(aksi==='pnol'){   posDivT=0; return }
+  const st=setelanKanal.get(id); if(!st) return;
+  const k=daftarTerakhir.find(x=>x.id===id);
+  st.auto=false;                       /* kenop disentuh -> berhenti mengikuti */
+  if(aksi==='ac') st.ac=!st.ac;
+  if(aksi==='vplus'||aksi==='vminus'){
+    /* PENTING: pos WAJIB dihitung ulang. Posisi di layar adalah v/vdiv+pos,
+       jadi mengubah vdiv sementara pos dibiarkan akan melemparkan jejak jauh
+       keluar layar — itu sebabnya sinyal hilang pada 20 mV/div ke bawah. */
+    const arr=deret(st);
+    const ofs=(st.ac&&k)?k.rata:0;
+    const acuan=k?((k.maks+k.min)/2-ofs):0;
+    const dLama=acuan/arr[st.iv]+st.pos;
+    st.iv = aksi==='vplus' ? Math.min(st.iv+1,arr.length-1)
+                           : Math.max(st.iv-1,0);
+    st.pos=dLama-acuan/arr[st.iv];
+    /* tahan di dalam kisi supaya tidak pernah lenyap */
+    const set=NDIV_Y/2-0.3;
+    if(dLama>set)  st.pos-=dLama-set;
+    if(dLama<-set) st.pos+=-set-dLama;
+  }
+  if(aksi==='naik')   st.pos+=LANGKAH_HALUS;
+  if(aksi==='turun')  st.pos-=LANGKAH_HALUS;
+  sigCtl='';
+});
+let daftarTerakhir=[], picuAktif=true;
+/* Tanda tangan HANYA memuat hal yang mengubah susunan (kanal, V/div, mode).
+   Nilai bacaan sengaja tidak disertakan: kalau ikut, DOM dibangun ulang tiap
+   bingkai dan tombolnya lenyap di antara tekan dan lepas — itu sebabnya
+   tombol volt/div tidak bisa diklik. */
+function bangunKendali(daftar){
+  /* Tanda tangan HANYA memuat hal yang mengubah SUSUNAN. Nilai bacaan dan
+     kedudukan kenop sengaja tidak ikut: kalau ikut, DOM dibangun ulang tiap
+     bingkai dan kenopnya lepas dari jari saat sedang digeser. */
+  const sig=daftar.map(k=>{const s=setelanKanal.get(k.id);
+    return k.id+'/'+k.nama+'/'+s.iv+'/'+(s.auto?'a':'m')+'/'+(s.ac?'ac':'dc')}).join('|')
+    +'/'+(picuAktif?'P':'-')+'/'+iJendela;
+  if(sig!==sigCtl){
+    sigCtl=sig;
+    const bc=(nm,id,kelas)=>'<span class="bc"><i>'+nm+'</i><b class="'+kelas+
+      '" data-b="'+id+'"></b></span>';
+    let html='';
+    daftar.forEach(k=>{
+      const st=setelanKanal.get(k.id);
+      html+='<div class="kan">'+
+        '<i style="background:'+k.warna+'"></i>'+
+        '<span class="nm">'+k.nama+'</span>'+
+        '<span class="grp2">'+
+          '<button data-id="'+k.id+'" data-aksi="vminus" title="Perkecil volt/div">−</button>'+
+          '<span class="vd">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
+          '<button data-id="'+k.id+'" data-aksi="vplus" title="Perbesar volt/div">+</button>'+
+        '</span>'+
+        /* kenop kedudukan tegak: halus seperti potensiometer */
+        '<input type="range" data-pos="'+k.id+'" min="-4" max="4" step="'+LANGKAH_HALUS+'" '+
+          'title="Geser sinyal ke atas atau ke bawah">'+
+        '<span class="grp2">'+
+          '<button data-id="'+k.id+'" data-aksi="turun" title="Turun 0,1 divisi">▼</button>'+
+          '<button data-id="'+k.id+'" data-aksi="naik" title="Naik 0,1 divisi">▲</button>'+
+        '</span>'+
+        '<button data-id="'+k.id+'" data-aksi="ac" title="Kopling: DC menampilkan tumpuan searahnya, AC membuangnya"'+
+          (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button>'+
+        bc('pp','pp'+k.id,'w1')+bc('kini','kn'+k.id,'w1')+
+        bc('T','T'+k.id,'w2')+bc('f','f'+k.id,'w2')+bc('τ','tau'+k.id,'w2')+
+        '<span class="ket" data-ket="'+k.id+'"></span>'+
+        '</div>';
+    });
+    html+='<div class="kan"><span class="nm">Waktu</span>'+
+          '<span class="grp2">'+
+            '<button data-aksi="tkurang" title="Perlambat sapuan">◀</button>'+
+            '<span class="vd">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X)+'/div')+'</span>'+
+            '<button data-aksi="ttambah" title="Percepat sapuan">▶</button>'+
+          '</span>'+
+          '<span class="nm">Geser</span>'+
+          '<input type="range" data-geser="t" min="0" max="'+GESER_MAKS+'" step="'+LANGKAH_HALUS+'" '+
+            'title="Geser sinyal ke kiri atau ke kanan, halus">'+
+          '<span class="grp2">'+
+            '<button data-aksi="pkiri" title="Ke belakang 0,1 divisi">◀</button>'+
+            '<button data-aksi="pkanan" title="Ke depan 0,1 divisi">▶</button>'+
+            '<button data-aksi="pnol" title="Kembali ke terkini">0</button>'+
+          '</span>'+
+          bc('posisi','posT','w2')+
+          '</div>';
+    html+='<div class="kan"><button data-aksi="auto" title="Kembalikan skala &amp; posisi otomatis">Auto skala</button>'+
+          '<button data-aksi="picu" title="Picu membuat sinyal berkala berdiri diam"'+
+          (picuAktif?' aria-pressed="true"':'')+'>Picu '+(picuAktif?'aktif':'bebas')+'</button>'+
+          '<span class="ket">kisi '+NDIV_Y+' divisi · segitiga kiri = titik nol · AC membuang tumpuan DC</span></div>';
+    elCtl.innerHTML=html;
+    /* kenop menulis langsung ke keadaan; tidak ada penyusunan ulang DOM */
+    elCtl.querySelectorAll('input[data-pos]').forEach(sl=>{
+      sl.addEventListener('input',()=>{
+        const st=setelanKanal.get(sl.dataset.pos);
+        if(st){ st.auto=false; st.pos=parseFloat(sl.value) }
+      });
+    });
+    const slT=elCtl.querySelector('input[data-geser="t"]');
+    if(slT) slT.addEventListener('input',()=>{posDivT=parseFloat(slT.value)});
+  }
+  /* nilai bacaan dan kedudukan kenop diperbarui tanpa menyentuh susunan */
+  const isi=(id,teks)=>{
+    const el=elCtl.querySelector('[data-b="'+id+'"]');
+    if(el && el.textContent!==teks) el.textContent=teks;
+  };
+  daftar.forEach(k=>{
+    const st=setelanKanal.get(k.id);
+    const tau=ukurTau(k), T=ukurPerioda(k);
+    isi('pp'+k.id,fmtNilai(k.maks-k.min,k.sat));
+    isi('kn'+k.id,fmtNilai(k.kini,k.sat));
+    isi('T'+k.id,T?fmtWaktu(T):'DC');
+    isi('f'+k.id,T?fmtHz(1/T):'—');
+    isi('tau'+k.id,tau?fmtWaktu(tau):'—');
+    const el=elCtl.querySelector('[data-ket="'+k.id+'"]');
+    if(el){
+      const t2=(k.halus?'':'pita = selubung')+(st.auto?'':(k.halus?'manual':' · manual'));
+      if(el.textContent!==t2) el.textContent=t2;
+    }
+    const sl=elCtl.querySelector('input[data-pos="'+k.id+'"]');
+    if(sl && document.activeElement!==sl){
+      const v=Math.max(-4,Math.min(4,st.pos)).toFixed(2);
+      if(sl.value!==v) sl.value=v;
+    }
+  });
+  isi('posT',posDivT?km(posDivT,3)+' div':'terkini');
+  const slT=elCtl.querySelector('input[data-geser="t"]');
+  if(slT && document.activeElement!==slT){
+    const v=posDivT.toFixed(2);
+    if(slT.value!==v) slT.value=v;
+  }
+}
+
+function gambarScope(){
+  const r=sc.getBoundingClientRect();
+  const dpr=Math.min(devicePixelRatio||1,2.5);
+  if(Math.abs(r.width-scL)>.5||Math.abs(r.height-scT)>.5){
+    scL=r.width; scT=r.height;
+    sc.width=Math.round(r.width*dpr); sc.height=Math.round(r.height*dpr);
+  }
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+  sctx.clearRect(0,0,scL,scT);
+  sctx.textBaseline='middle';
+
+  const mentah=[...jejak.entries()].filter(([,j])=>j.halus.t.length>1);
+  if(!mentah.length){
+    const adaProbe=M.komponen.some(k=>k.jenis==='probe'||
+      ((k.jenis==='volt'||k.jenis==='ampere')&&k.prop.skop));
+    sctx.fillStyle=C.muted; sctx.font=(12*FP())+'px system-ui, sans-serif'; sctx.textAlign='center';
+    sctx.fillText(!adaProbe ? 'Pasang probe, atau nyalakan "Tampilkan di skop" pada alat ukur'
+                : !hidup   ? 'Tekan Power untuk mulai merekam'
+                :            'Merekam…', scL/2, scT/2);
+    if(elCtl.innerHTML){elCtl.innerHTML='';sigCtl=''}
+    return;
+  }
+
+  const tAkhir=Math.max(...mentah.map(([,j])=>j.halus.t[j.halus.t.length-1]));
+  const lebar=JENDELA[iJendela]||Infinity;
+  const geserT = (lebar===Infinity?0:posDivT*lebar/NDIV_X);
+  let tMulai=Math.max(0,tAkhir-lebar-geserT), adaPicu=false;
+  /* PICU (trigger): sapuan dimulai pada perlintasan naik yang sama setiap
+     kali, sehingga sinyal berkala berdiri diam alih-alih menari-nari.
+     Inilah jawaban osiloskop untuk gejala itu — bukan menghentikan gambar. */
+  if(picuAktif && lebar!==Infinity){
+    const sumber=(dipilih&&jejak.has(dipilih.id)&&jejak.get(dipilih.id).jenis==='probe')
+                 ? dipilih.id : mentah[0][0];
+    const jj=jejak.get(sumber);
+    /* picu dicari pada penyangga halus bila ia mencakup jendelanya, karena
+       ketepatan tepi menentukan kestabilan gambar */
+    const j=jj && (jj.halus.t.length>6 && jj.halus.t[0]<=tMulai) ? jj.halus
+          : (jj?jj.kasar:null);
+    if(j && j.t.length>6){
+      const tAmbil=tAkhir-Math.min(3*lebar, j.t[j.t.length-1]-j.t[0]);
+      let lo=Infinity, hi=-Infinity;
+      for(let i=0;i<j.t.length;i++) if(j.t[i]>=tAmbil){
+        if(j.v[i]<lo) lo=j.v[i];
+        if(j.v[i]>hi) hi=j.v[i];
+      }
+      if(hi-lo>1e-9){
+        const aras=(lo+hi)/2, batas=tAkhir-0.9*lebar;
+        for(let i=j.t.length-1;i>0;i--){
+          if(j.t[i]>batas) continue;
+          if(j.v[i-1]<aras && j.v[i]>=aras){
+            tMulai=Math.max(0,j.t[i]-0.1*lebar-geserT); adaPicu=true; break;
+          }
+        }
+      }
+    }
+  }
+  const tSelesai = lebar===Infinity ? tAkhir : tMulai+lebar;
+  const rentangT=Math.max(tSelesai-tMulai,1e-9);
+
+  const daftar=mentah.map(([id,j],i)=>{
+    /* pakai penyangga halus bila ia mencakup seluruh jendela; kalau tidak,
+       pakai yang kasar beserta selubungnya */
+    /* pakai halus bila ia mencakup jendelanya, ATAU bila ia tidak dimulai
+       lebih lambat daripada kasar (mis. kanal baru: keduanya sama-sama muda,
+       jadi yang halus lebih berguna) */
+    const adaKasar=j.kasar.t.length>0;
+    const halusCukup = j.halus.t.length>1 &&
+      (j.halus.t[0]<=tMulai+1e-12 || !adaKasar ||
+       j.halus.t[0]<=j.kasar.t[0]+1e-12);
+    const sb = halusCukup ? j.halus : j.kasar;
+    if(!sb.t.length) return null;
+    const t=[],v=[],lo=[],hi=[];
+    for(let q=0;q<sb.t.length;q++) if(sb.t[q]>=tMulai&&sb.t[q]<=tSelesai){
+      t.push(sb.t[q]); v.push(sb.v[q]);
+      lo.push(halusCukup?sb.v[q]:sb.lo[q]);
+      hi.push(halusCukup?sb.v[q]:sb.hi[q]);
+    }
+    if(!t.length){
+      const n=sb.t.length-1;
+      t.push(sb.t[n]); v.push(sb.v[n]);
+      lo.push(halusCukup?sb.v[n]:sb.lo[n]); hi.push(halusCukup?sb.v[n]:sb.hi[n]);
+    }
+    let jum=0; for(const q of v) jum+=q;
+    return {id,t,v,lo,hi,halus:halusCukup,sat:j.sat||'V',jenis:j.jenis,nama:j.nama||id,
+            warna:WARNA_KANAL[i%WARNA_KANAL.length],
+            min:Math.min(...lo),maks:Math.max(...hi),kini:v[v.length-1],
+            rata:jum/v.length};
+  }).filter(Boolean);
+  if(!daftar.length) return;
+  selaraskanKanal(daftar);
+  daftarTerakhir=daftar;
+
+  const kiri=26, kanan=10, atas=8, bawah=16;
+  const yAtas=atas, yBawah=scT-bawah, yTengah=(yAtas+yBawah)/2;
+  const divPx=(yBawah-yAtas)/NDIV_Y;
+  const X=t=>kiri+((t-tMulai)/rentangT)*(scL-kiri-kanan);
+  const Y=(v,st,ofs)=>yTengah-((v-(ofs||0))/deret(st)[st.iv]+st.pos)*divPx;
+
+  /* kisi */
+  sctx.strokeStyle='rgba(31,74,80,.9)'; sctx.lineWidth=1;
+  for(let i=0;i<=NDIV_Y;i++){
+    const y=Math.round(yAtas+i*divPx)+.5;
+    sctx.beginPath();sctx.moveTo(kiri,y);sctx.lineTo(scL-kanan,y);sctx.stroke();
+  }
+  for(let i=0;i<=NDIV_X;i++){
+    const x=Math.round(kiri+i*(scL-kiri-kanan)/NDIV_X)+.5;
+    sctx.beginPath();sctx.moveTo(x,yAtas);sctx.lineTo(x,yBawah);sctx.stroke();
+  }
+  sctx.strokeStyle='rgba(127,160,163,.4)'; sctx.lineWidth=1.3;
+  sctx.beginPath();sctx.moveTo(kiri,Math.round(yTengah)+.5);
+  sctx.lineTo(scL-kanan,Math.round(yTengah)+.5);sctx.stroke();
+
+  /* jejak, dipotong pada area kisi */
+  sctx.save();
+  sctx.beginPath();sctx.rect(kiri,yAtas,scL-kiri-kanan,yBawah-yAtas);sctx.clip();
+  daftar.forEach(k=>{
+    const st=setelanKanal.get(k.id);
+    const disorot=!!dipilih&&dipilih.id===k.id;
+    sctx.strokeStyle=k.warna; sctx.lineWidth=(disorot?2.4:1.5)*FP();
+    sctx.globalAlpha=disorot?1:.85;
+    const ofs=st.ac?k.rata:0;
+    if(!k.halus){
+      /* selubung terendah-tertinggi tiap selang: sinyal yang lebih cepat
+         daripada laju cuplikan tampil sebagai pita, bukan sebagai cacah
+         palsu yang menyesatkan */
+      let tebal=0;
+      for(let i=0;i<k.t.length;i++) tebal=Math.max(tebal,k.hi[i]-k.lo[i]);
+      if(tebal/deret(st)[st.iv]*divPx>2){
+        sctx.globalAlpha=disorot?.45:.32; sctx.fillStyle=k.warna;
+        sctx.beginPath();
+        for(let i=0;i<k.t.length;i++) sctx.lineTo(X(k.t[i]),Y(k.hi[i],st,ofs));
+        for(let i=k.t.length-1;i>=0;i--) sctx.lineTo(X(k.t[i]),Y(k.lo[i],st,ofs));
+        sctx.closePath(); sctx.fill();
+        sctx.globalAlpha=disorot?1:.85;
+      }
+    }
+    sctx.beginPath();
+    for(let i=0;i<k.t.length;i++){
+      const x=X(k.t[i]), y=Y(k.v[i],st,ofs);
+      i?sctx.lineTo(x,y):sctx.moveTo(x,y);
+    }
+    sctx.stroke(); sctx.globalAlpha=1;
+  });
+  sctx.restore();
+
+  /* penanda titik nol tiap kanal di tepi kiri */
+  daftar.forEach(k=>{
+    const st=setelanKanal.get(k.id);
+    const y=Y(st.ac?k.rata:0,st,st.ac?k.rata:0);
+    if(y<yAtas-2||y>yBawah+2) return;
+    sctx.fillStyle=k.warna;
+    sctx.beginPath();
+    sctx.moveTo(kiri-2,y); sctx.lineTo(kiri-11,y-5); sctx.lineTo(kiri-11,y+5);
+    sctx.closePath(); sctx.fill();
+  });
+
+  /* sumbu waktu */
+  sctx.fillStyle=C.muted; sctx.font=(9.5*FP())+'px ui-monospace, monospace';
+  sctx.textAlign='left';  sctx.fillText(fmtWaktu(tMulai),kiri,yBawah+8);
+  sctx.textAlign='right'; sctx.fillText(fmtWaktu(tSelesai),scL-kanan,yBawah+8);
+  sctx.textAlign='center';
+  sctx.fillText(fmtWaktu(rentangT/NDIV_X)+'/div'+
+                (adaPicu?'  · terpicu':(picuAktif&&lebar!==Infinity?'  · menunggu picu':''))+
+                (jeda?'  · JEDA':(hidup?'':'  · berhenti')),(kiri+scL-kanan)/2,yBawah+8);
+  /* tanda titik picu di 10% dari tepi kiri */
+  if(adaPicu){
+    const xp=kiri+0.1*(scL-kiri-kanan);
+    sctx.strokeStyle='rgba(134,182,222,.55)'; sctx.lineWidth=1;
+    sctx.beginPath();sctx.moveTo(xp+.5,yAtas);sctx.lineTo(xp+.5,yBawah);sctx.stroke();
+    sctx.fillStyle=C.pilih;
+    sctx.beginPath();sctx.moveTo(xp,yAtas);sctx.lineTo(xp-4,yAtas-5);
+    sctx.lineTo(xp+4,yAtas-5);sctx.closePath();sctx.fill();
+  }
+
+  bangunKendali(daftar);
+}
+
+/* tau hanya dilaporkan bila jejaknya memang satu transisi utuh: mulai dekat
+   nol lalu naik, atau mulai tinggi lalu turun ke nol. */
+/* Perioda diukur dari jarak antar perlintasan naik pada aras tengah sinyal.
+   Untuk DC tidak ada perlintasan, jadi hasilnya 0 dan dilaporkan sebagai DC. */
+function ukurPerioda(k){
+  const v=k.v,t=k.t,n=v.length;
+  if(n<10) return 0;
+  const ayun=k.maks-k.min;
+  if(ayun<1e-9) return 0;
+  const aras=(k.min+k.maks)/2, batas=ayun*0.05;
+  const naik=[];
+  let siap=true;
+  for(let i=1;i<n;i++){
+    if(siap && v[i-1]<aras && v[i]>=aras){
+      const r=(aras-v[i-1])/((v[i]-v[i-1])||1);
+      naik.push(t[i-1]+(t[i]-t[i-1])*r);
+      siap=false;
+    }
+    if(!siap && v[i]<aras-batas) siap=true;   /* histeresis, tolak derau */
+  }
+  if(naik.length<2) return 0;
+  const T=(naik[naik.length-1]-naik[0])/(naik.length-1);
+  return T>1e-9?T:0;
+}
+
+/* tau diukur dari selisih waktu perlintasan 10% dan 90% pada lonjakan
+   terakhir. Untuk tanggapan RC, t90 - t10 = tau * ln 9 — selalu, dan tidak
+   bergantung pada "kapan lonjakan itu mulai". Cara sebelumnya mengukur dari
+   awal lonjakan, dan itu rapuh: dataran datar sebelum lonjakan juga menjauh
+   dari nilai akhir, sehingga penelusuran mundur merambat sampai ke fase
+   sebelumnya dan tau terbaca 50 ms padahal RC-nya 10 ms. */
+const LN9=Math.log(9);
+function ukurTau(k){
+  const v=k.v, t=k.t, n=v.length;
+  if(n<12) return 0;
+  const ayun=k.maks-k.min;
+  if(ayun<1e-9) return 0;
+  const vAkhir=v[n-1];
+  /* arah lonjakan terakhir, diambil dari beberapa cuplikan agar tidak
+     terkecoh satu titik */
+  const arah=Math.sign(vAkhir-v[Math.max(0,n-6)]);
+  if(!arah) return 0;
+  /* jalan mundur selama masih searah, untuk mendapat NILAI dasar lonjakan */
+  const tolL=ayun*0.01;
+  let i0=n-1;
+  for(let i=n-2;i>=0;i--){
+    if((v[i+1]-v[i])*arah >= -tolL) i0=i; else break;
+  }
+  const vMulai=v[i0], amp=vAkhir-vMulai;
+  if(Math.abs(amp)<0.4*ayun) return 0;
+  if(Math.abs(v[n-1]-v[n-4])>0.02*Math.abs(amp)) return 0;   /* harus sudah mendatar */
+  /* perlintasan 10% dan 90%, dengan penyisipan lurus antar cuplikan */
+  const lintas=frac=>{
+    const sasaran=vMulai+frac*amp;
+    for(let i=i0+1;i<n;i++){
+      const a1=v[i-1], b1=v[i];
+      if((arah>0 && b1>=sasaran) || (arah<0 && b1<=sasaran)){
+        const d=b1-a1;
+        const r=Math.abs(d)>1e-15 ? (sasaran-a1)/d : 0;
+        return t[i-1]+(t[i]-t[i-1])*Math.min(Math.max(r,0),1);
+      }
+    }
+    return null;
+  };
+  const t10=lintas(0.1), t90=lintas(0.9);
+  if(t10===null||t90===null||t90<=t10) return 0;
+  return (t90-t10)/LN9;
+}
+
+/* ==========================================================================
+   9. MASUKAN
+   ========================================================================== */
+const chip=document.getElementById('chip'), chipTeks=document.getElementById('chipTeks');
+const elPeringatan=document.getElementById('peringatan');
+document.getElementById('chipBatal').addEventListener('click',()=>{pinTertunda=null;kabar();gambarIns()});
+
+function namaPin(kunci){
+  const [id,i]=kunci.split(':'); const k=komponenOleh(id);
+  return k?JENIS[k.jenis].nama+' pin '+(+i+1):kunci;
+}
+function kabar(){
+  chip.classList.toggle('tampil',!!pinTertunda);
+  if(pinTertunda) chipTeks.textContent='Dari '+namaPin(pinTertunda)+
+    ' — ketuk pin tujuan, atau ketuk kawat untuk membuat titik cabang';
+  elPeringatan.textContent=(hidup&&hasil&&!hasil.ok&&hasil.alasan==='tanpaMassa')
+    ? 'Rangkaian butuh simbol massa sebagai acuan 0 V' : '';
+}
+
+const jari=new Map();
+let aksi=null, tekanUji=null, awal=null;
+let sudahGerak=false, sudahRekam=false, pinch=null;
+const posKanvas=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  const [sx,sy]=posKanvas(e);
+  jari.set(e.pointerId,{x:sx,y:sy});
+  if(jari.size===2){
+    const [a,b]=[...jari.values()];
+    pinch={d:Math.hypot(a.x-b.x,a.y-b.y),zoom,mid:[(a.x+b.x)/2,(a.y+b.y)/2],pan:{...pan}};
+    aksi=null; tekanUji=null; return;
+  }
+  awal={x:sx,y:sy}; sudahGerak=false; sudahRekam=false;
+  const [wx,wy]=keDunia(sx,sy);
+  tekanUji=ujiTitik(wx,wy);
+
+  if(tekanUji.t==='badan')
+    aksi={t:'geserKomp',k:tekanUji.k,dx:wx-tekanUji.k.x,dy:wy-tekanUji.k.y};
+  else if(tekanUji.t==='pegangan'){
+    const k=komponenOleh(tekanUji.kunci.split(':')[0]);
+    aksi={t:'geserKomp',k,dx:wx-k.x,dy:wy-k.y};
+  }
+  else if(tekanUji.t==='tuas')
+    aksi={t:'geserKomp',k:tekanUji.k,dx:wx-tekanUji.k.x,dy:wy-tekanUji.k.y};
+  else if(tekanUji.t==='kawat')
+    aksi={t:'geserKawat',i:tekanUji.i,tegak:tekanUji.tegak};
+  else
+    aksi={t:'geserPan',x:sx,y:sy,pan:{...pan}};
+});
+
+cv.addEventListener('pointermove',e=>{
+  const [sx,sy]=posKanvas(e);
+  if(!jari.has(e.pointerId)){
+    const [wx,wy]=keDunia(sx,sy);
+    const u=ujiTitik(wx,wy);
+    sorot=(u.t==='kosong')?null:u;
+    cv.style.cursor = u.t==='pegangan'?'crosshair'
+                    : u.t==='tuas'?'pointer'
+                    : u.t==='badan'?'move'
+                    : u.t==='kawat'?(pinTertunda?'crosshair':(u.tegak?'ew-resize':'ns-resize'))
+                    : 'grab';
+    return;
+  }
+  jari.set(e.pointerId,{x:sx,y:sy});
+  if(awal&&Math.hypot(sx-awal.x,sy-awal.y)>AMBANG_GERAK) sudahGerak=true;
+
+  if(jari.size===2&&pinch){
+    const [a,b]=[...jari.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+    const z=Math.min(Math.max(pinch.zoom*d/(pinch.d||1),.45),2.8);
+    const [mx,my]=pinch.mid;
+    pan.x=pinch.pan.x+mx/pinch.zoom-mx/z;
+    pan.y=pinch.pan.y+my/pinch.zoom-my/z;
+    zoom=z; return;
+  }
+  if(!sudahGerak||!aksi) return;
+  const [wx,wy]=keDunia(sx,sy);
+
+  if(aksi.t==='geserKomp'){
+    if(!sudahRekam){rekam();sudahRekam=true}
+    aksi.k.x=bulat(wx-aksi.dx); aksi.k.y=bulat(wy-aksi.dy);
+    if(dipilih!==aksi.k) pilihKomp(aksi.k);
+    segarkan(); return;
+  }
+  if(aksi.t==='geserKawat'){
+    const w=M.kawat[aksi.i]; if(!w) return;
+    if(!sudahRekam){rekam();sudahRekam=true}
+    if(aksi.tegak){ w.orient='v'; w.m=bulat(wx) }
+    else          { w.orient='h'; w.m=bulat(wy) }
+    if(pilihKawat!==aksi.i) pilihWire(aksi.i);
+    return;                       /* topologi tidak berubah, tak perlu hitung ulang */
+  }
+  pan.x=aksi.pan.x-(sx-aksi.x)/zoom;
+  pan.y=aksi.pan.y-(sy-aksi.y)/zoom;
+});
+
+let ketukLalu={t:0,x:0,y:0,id:''};
+function lepas(e){
+  const ada=jari.delete(e.pointerId);
+  if(jari.size<2) pinch=null;
+  if(ada&&!sudahGerak&&tekanUji&&awal){
+    /* deteksi ketukan ganda dipakai satu aturan untuk sentuh maupun mouse */
+    const kini=(performance&&performance.now)?performance.now():Date.now();
+    const sasaran = tekanUji.t==='badan' ? tekanUji.k.id
+                  : tekanUji.t==='kawat' ? 'w'+tekanUji.i : '';
+    const ganda = !!sasaran && sasaran===ketukLalu.id && kini-ketukLalu.t<380 &&
+                  Math.hypot(awal.x-ketukLalu.x,awal.y-ketukLalu.y)<24;
+    ketukLalu={t:kini,x:awal.x,y:awal.y,id:sasaran};
+
+    if(tekanUji.t==='pegangan'){
+      const kunci=tekanUji.kunci;
+      if(pinTertunda&&pinTertunda!==kunci){
+        if(pinTertunda.split(':')[0]!==kunci.split(':')[0]){
+          if(sambung(pinTertunda,kunci)) rekam();
+          pinTertunda=null;
+        }
+      }else pinTertunda = pinTertunda===kunci ? null : kunci;
+      segarkan(); gambarIns();
+    }
+    else if(tekanUji.t==='tuas'){
+      rekam();
+      const kk=tekanUji.k;
+      if(tekanUji.aksi==='toggle') kk.prop.tutup=kk.prop.tutup?0:1;
+      if(tekanUji.aksi==='tambah') kk.prop.pos=Math.min((kk.prop.pos||0)+.05,1);
+      if(tekanUji.aksi==='kurang') kk.prop.pos=Math.max((kk.prop.pos||0)-.05,0);
+      segarkan(); gambarIns();
+    }
+    else if(tekanUji.t==='badan'){
+      pinTertunda=null; pilihKomp(tekanUji.k);
+      if(ganda) bukaSheet(true);
+      else{
+        bukaSheet(false);
+        /* sekali ketuk pada alat ukur: layar osiloskop saja, tanpa detail.
+           Komponennya tetap terpilih sehingga bisa langsung digeser. */
+        const kk=tekanUji.k;
+        if(kk.jenis==='probe' ||
+           ((kk.jenis==='volt'||kk.jenis==='ampere')&&kk.prop.skop)) bukaScope(true);
+      }
+      segarkan();
+    }
+    else if(tekanUji.t==='kawat'){
+      if(pinTertunda){
+        /* menyambung ke tengah kawat -> lahir titik cabang */
+        const [wx,wy]=keDunia(awal.x,awal.y);
+        rekam();
+        const j=belahKawat(tekanUji.i,tekanUji.seg,wx,wy);
+        if(j) sambung(pinTertunda,j.id+':0');
+        pinTertunda=null; pilihKawat=-1; pilihKomp(null);
+      }else{
+        pinTertunda=null; pilihWire(tekanUji.i); bukaSheet(ganda);
+      }
+      segarkan();
+    }
+    else { pinTertunda=null; pilihKomp(null); pilihWire(-1); bukaSheet(false); segarkan() }
+  }
+  aksi=null; tekanUji=null; awal=null;
+}
+cv.addEventListener('pointerup',lepas);
+cv.addEventListener('pointercancel',lepas);
+cv.addEventListener('pointerleave',()=>{sorot=null});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const [sx,sy]=posKanvas(e);
+  const z=Math.min(Math.max(zoom*(e.deltaY<0?1.1:1/1.1),.45),2.8);
+  pan.x+=sx/zoom-sx/z; pan.y+=sy/zoom-sy/z; zoom=z;
+},{passive:false});
+addEventListener('keydown',e=>{
+  /* Jangan sentuh papan ketik bila fokus sedang berada di kotak isian.
+     Tanpa penjaga ini, Backspace saat mengetik nilai komponen justru
+     menghapus komponennya. */
+  const f=e.target;
+  if(f&&(f.tagName==='INPUT'||f.tagName==='SELECT'||f.tagName==='TEXTAREA'||f.isContentEditable)) return;
+  if(e.key==='Escape'){
+    if(skopbar.classList.contains('buka')) bukaScope(false);
+    pinTertunda=null;pilihKomp(null);pilihWire(-1);bukaSheet(false);kabar();segarkan();
+  }
+  if((e.key==='Delete'||e.key==='Backspace')){
+    if(dipilih){rekam();hapusKomponen(dipilih.id);pilihKomp(null);segarkan()}
+    else if(pilihKawat>=0){rekam();M.kawat.splice(pilihKawat,1);pilihWire(-1);segarkan()}
+  }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();bUndo.click()}
+});
+
+/* ==========================================================================
+   10. BILAH ALAT, PALET, BERKAS
+   ========================================================================== */
+document.getElementById('bReset').addEventListener('click',resetWaktu);
+const bSkala=document.getElementById('bSkala');
+function labelSkala(){
+  bSkala.textContent=km(SKALA[iSkala],SKALA[iSkala]<1?2:0).replace(',00','')+'×';
+}
+bSkala.addEventListener('click',()=>{iSkala=(iSkala+1)%SKALA.length;labelSkala()});
+labelSkala();
+
+const bJeda=document.getElementById('bJeda');
+bJeda.addEventListener('click',()=>{
+  jeda=!jeda;
+  bJeda.setAttribute('aria-pressed',String(jeda));
+  bJeda.querySelector('span').textContent=jeda?'Lanjut':'Jeda';
+  bJeda.querySelector('svg').outerHTML = jeda
+    ? '<svg class="ik" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>'
+    : '<svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg>';
+  /* Nolkan penanda waktu bingkai supaya saat dilanjutkan tidak ada lompatan:
+     bingkai pertama setelah jeda memakai dt = 0. */
+  lalu=0;
+});
+const bPower=document.getElementById('bPower');
+bPower.addEventListener('click',()=>{
+  hidup=!hidup; bPower.setAttribute('aria-pressed',String(hidup));
+  bPower.querySelector('span').textContent=hidup?'Power aktif':'Power';
+  if(hidup){ jejak.clear(); setelanKanal.clear(); sigCtl=''; nolkanRekam() }  /* rekaman baru */
+  segarkan();
+});
+const menu=document.getElementById('menu');
+document.getElementById('bMenu').addEventListener('click',e=>{e.stopPropagation();menu.classList.toggle('buka')});
+document.addEventListener('click',()=>{menu.classList.remove('buka');
+  document.getElementById('subContoh').classList.remove('buka')});
+document.getElementById('mContohBuka').addEventListener('click',e=>{
+  e.stopPropagation();
+  document.getElementById('subContoh').classList.toggle('buka');
+});
+const tutupMenu=f=>()=>{menu.classList.remove('buka');f()};
+const bTampil=document.getElementById('bTampil');
+function setModeTampil(m){
+  modeTampil=m&3;
+  bTampil.querySelector('span').textContent=MODE_NAMA[modeTampil];
+  bTampil.setAttribute('aria-pressed',String(modeTampil>0));
+}
+bTampil.addEventListener('click',()=>setModeTampil(modeTampil+1));
+document.getElementById('bPas').addEventListener('click',()=>pas());
+document.getElementById('mLabel').addEventListener('click',tutupMenu(()=>setModeTampil(modeTampil^1)));
+const bProyektor=document.getElementById('mProyektor');
+bProyektor.addEventListener('click',tutupMenu(()=>{
+  proyektor=!proyektor;
+  document.body.classList.toggle('proyektor',proyektor);
+  bProyektor.querySelector('span').textContent=proyektor?'Mode proyektor — aktif':'Mode proyektor';
+  bProyektor.setAttribute('aria-pressed',String(proyektor));
+  ukur();                     /* tinggi layar skop berubah oleh kelas CSS */
+}));
+document.getElementById('mKotak').addEventListener('click',tutupMenu(()=>setModeTampil(modeTampil^2)));
+document.getElementById('mPas').addEventListener('click',tutupMenu(pas));
+document.getElementById('mContoh').addEventListener('click',tutupMenu(muatContoh));
+document.getElementById('mContohRC').addEventListener('click',tutupMenu(()=>{
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const s  =tambahKomponen('sumber',80,260);
+  const sw1=tambahKomponen('saklar',200,160);
+  const r1 =tambahKomponen('resistor',340,160); r1.prop.R=1000;
+  const am =tambahKomponen('ampere',220,360);
+  const c  =tambahKomponen('kapasitor',480,260); c.prop.C=10; c.rot=1;
+  const p  =tambahKomponen('probe',480,160);
+  /* cabang pengosongan tersendiri: buka SW1, tutup SW2 */
+  const sw2=tambahKomponen('saklar',620,180); sw2.prop.tutup=0; sw2.rot=1;
+  const r2 =tambahKomponen('resistor',620,300); r2.prop.R=1000; r2.rot=1;
+  const g  =tambahKomponen('massa',80,400);
+  [[s.id+':0',sw1.id+':0'],[sw1.id+':1',r1.id+':0'],[r1.id+':1',c.id+':0'],
+   [c.id+':0',p.id+':0'],[c.id+':0',sw2.id+':0'],[sw2.id+':1',r2.id+':0'],
+   [r2.id+':1',c.id+':1'],[c.id+':1',am.id+':1'],[am.id+':0',s.id+':1'],
+   [s.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=1; labelSkala();
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}));
+document.getElementById('mContohLED').addEventListener('click',tutupMenu(()=>{
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const s =tambahKomponen('sumber',100,240); s.prop.E=5;
+  const r =tambahKomponen('resistor',260,160); r.prop.R=150;
+  const d =tambahKomponen('led',440,160);
+  const p =tambahKomponen('probe',380,160);
+  const am=tambahKomponen('ampere',240,340);
+  const g =tambahKomponen('massa',100,400);
+  [[s.id+':0',r.id+':0'],[r.id+':1',d.id+':0'],[r.id+':1',p.id+':0'],
+   [d.id+':1',am.id+':1'],[am.id+':0',s.id+':1'],[s.id+':1',g.id+':0']]
+    .forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=0; labelSkala();
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}));
+document.getElementById('mContohPS').addEventListener('click',tutupMenu(()=>{
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const s  =tambahKomponen('sumberac',100,280); s.prop.Vp=12; s.prop.f=50;
+  const d1 =tambahKomponen('dioda',280,180);
+  const d2 =tambahKomponen('dioda',280,380);
+  const d3 =tambahKomponen('dioda',460,380);
+  const d4 =tambahKomponen('dioda',460,180);
+  const c  =tambahKomponen('kapasitor',620,280); c.prop.C=470; c.rot=1;
+  const r  =tambahKomponen('resistor',760,280); r.prop.R=1000; r.rot=1;
+  const p  =tambahKomponen('probe',620,180);
+  const g  =tambahKomponen('massa',760,420);
+  /* jembatan: d1,d4 dari simpul A; d2,d3 dari simpul B */
+  [[d1.id+':0',s.id+':0'],[d4.id+':1',s.id+':0'],
+   [d2.id+':0',s.id+':1'],[d3.id+':1',s.id+':1'],
+   [d1.id+':1',d2.id+':1'],[d1.id+':1',c.id+':0'],[c.id+':0',r.id+':0'],
+   [c.id+':0',p.id+':0'],
+   [d3.id+':0',d4.id+':0'],[d3.id+':0',c.id+':1'],[c.id+':1',r.id+':1'],
+   [r.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=2; labelSkala(); iJendela=3; labelJendela(); bukaScope(true);
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}));
+document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const vcc=tambahKomponen('sumber',760,240); vcc.prop.E=12;
+  const vin=tambahKomponen('sumber',100,300); vin.prop.E=5;
+  const sw =tambahKomponen('saklar',240,200);
+  const rb =tambahKomponen('resistor',400,200); rb.prop.R=10000;
+  const q  =tambahKomponen('npn',540,240);
+  const rl =tambahKomponen('resistor',560,60); rl.prop.R=470; rl.rot=0;
+  const led=tambahKomponen('led',700,60);
+  const g  =tambahKomponen('massa',380,440);
+  [[vin.id+':0',sw.id+':0'],[sw.id+':1',rb.id+':0'],[rb.id+':1',q.id+':0'],
+   [vcc.id+':0',led.id+':1'],[led.id+':0',rl.id+':1'],[rl.id+':0',q.id+':1'],
+   [q.id+':2',g.id+':0'],[vin.id+':1',g.id+':0'],[vcc.id+':1',g.id+':0']]
+    .forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=0; labelSkala();
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}));
+document.getElementById('mContohCE').addEventListener('click',tutupMenu(()=>{
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const vcc=tambahKomponen('sumber',820,220); vcc.prop.E=12;
+  const rb =tambahKomponen('resistor',480,80); rb.prop.R=470000;
+  const rc =tambahKomponen('resistor',700,140); rc.prop.R=2200; rc.rot=1;
+  const q  =tambahKomponen('npn',600,300);
+  const cin=tambahKomponen('kapasitor',380,220); cin.prop.C=10;
+  const ac =tambahKomponen('sumberac',200,260); ac.prop.Vp=0.01; ac.prop.f=1000;
+  const pIn=tambahKomponen('probe',480,220);
+  const pOut=tambahKomponen('probe',700,240);
+  const g  =tambahKomponen('massa',400,460);
+  [[ac.id+':0',cin.id+':0'],[cin.id+':1',q.id+':0'],[cin.id+':1',pIn.id+':0'],
+   [rb.id+':1',q.id+':0'],[rb.id+':0',vcc.id+':0'],
+   [vcc.id+':0',rc.id+':0'],[rc.id+':1',q.id+':1'],[rc.id+':1',pOut.id+':0'],
+   [q.id+':2',g.id+':0'],[ac.id+':1',g.id+':0'],[vcc.id+':1',g.id+':0']]
+    .forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=3; labelSkala(); iJendela=5; labelJendela(); bukaScope(true);
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}));
+function mulaiContoh(){
+  rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+}
+function selesaiContoh(skala,jendela){
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  iSkala=skala; labelSkala();
+  if(jendela!==undefined){ iJendela=jendela; labelJendela(); bukaScope(true) }
+  pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
+}
+document.getElementById('mContohPot').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const s =tambahKomponen('sumber',120,300); s.prop.E=12;
+  const p =tambahKomponen('potensio',380,200); p.prop.R=10000; p.prop.pos=.5;
+  const rl=tambahKomponen('resistor',560,300); rl.prop.R=10000; rl.rot=1;
+  const pr=tambahKomponen('probe',380,120);
+  const am=tambahKomponen('ampere',560,120);
+  const g =tambahKomponen('massa',120,420);
+  [[s.id+':0',p.id+':0'],[p.id+':2',s.id+':1'],[p.id+':1',pr.id+':0'],
+   [p.id+':1',am.id+':0'],[am.id+':1',rl.id+':0'],[rl.id+':1',s.id+':1'],
+   [s.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(0);
+}));
+document.getElementById('mContohTrafo').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const ac=tambahKomponen('sumberac',100,300); ac.prop.Vp=311; ac.prop.f=50;
+  const tf=tambahKomponen('trafo',280,300); tf.prop.n=12/220;
+  const d1=tambahKomponen('dioda',440,200);
+  const d2=tambahKomponen('dioda',440,400);
+  const d3=tambahKomponen('dioda',600,400);
+  const d4=tambahKomponen('dioda',600,200);
+  const c =tambahKomponen('kapasitor',760,300); c.prop.C=470; c.rot=1;
+  const r =tambahKomponen('resistor',900,300); r.prop.R=220; r.rot=1;
+  const pr=tambahKomponen('probe',760,200);
+  const g =tambahKomponen('massa',900,440);
+  [[ac.id+':0',tf.id+':0'],[ac.id+':1',tf.id+':1'],
+   [d1.id+':0',tf.id+':2'],[d4.id+':1',tf.id+':2'],
+   [d2.id+':0',tf.id+':3'],[d3.id+':1',tf.id+':3'],
+   [d1.id+':1',d2.id+':1'],[d1.id+':1',c.id+':0'],[c.id+':0',r.id+':0'],
+   [c.id+':0',pr.id+':0'],
+   [d3.id+':0',d4.id+':0'],[d3.id+':0',c.id+':1'],[c.id+':1',r.id+':1'],
+   [r.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(2,3);
+}));
+document.getElementById('mContohOA').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const ac=tambahKomponen('sumberac',120,320); ac.prop.Vp=0.5; ac.prop.f=100;
+  const ri=tambahKomponen('resistor',300,240); ri.prop.R=1000;
+  const rf=tambahKomponen('resistor',480,120); rf.prop.R=10000;
+  const u =tambahKomponen('opamp',480,260); u.prop.Vsat=12;
+  const pi=tambahKomponen('probe',260,180);
+  const po=tambahKomponen('probe',640,180);
+  const g =tambahKomponen('massa',300,440);
+  [[ac.id+':0',ri.id+':0'],[ri.id+':0',pi.id+':0'],
+   [ri.id+':1',u.id+':1'],[rf.id+':0',u.id+':1'],[rf.id+':1',u.id+':2'],
+   [u.id+':2',po.id+':0'],[u.id+':0',g.id+':0'],[ac.id+':1',g.id+':0']]
+    .forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(2,4);
+}));
+document.getElementById('mBersih').addEventListener('click',tutupMenu(()=>{
+  rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  pinTertunda=null; pilihKomp(null); segarkan();
+}));
+
+const tirai=document.getElementById('tirai'), paletSheet=document.getElementById('paletSheet');
+const bukaPalet=b=>{tirai.classList.toggle('buka',b);paletSheet.classList.toggle('buka',b)};
+document.getElementById('bTambah').addEventListener('click',()=>{pasangPalet();bukaPalet(true)});
+tirai.addEventListener('click',()=>bukaPalet(false));
+const kisi7=document.getElementById('kisi7');
+/* Palet disusun ulang setiap kali dibuka, karena ikonnya digambar ke kanvas
+   dan perlu memakai devicePixelRatio serta mode proyektor yang berlaku saat itu. */
+function pasangPalet(){
+  kisi7.innerHTML='';
+  for(const g of KELOMPOK){
+    const jd=document.createElement('p');
+    jd.className='lbl'; jd.style.cssText='grid-column:1/-1;margin:9px 0 1px';
+    jd.innerHTML=g.nama;
+    kisi7.appendChild(jd);
+    for(const j of g.isi){
+      const b=document.createElement('button');
+      b.className='pk';
+      const kanvas=document.createElement('canvas');
+      kanvas.style.cssText='width:46px;height:34px;flex:none';
+      const sp=document.createElement('span'); sp.textContent=JENIS[j].nama;
+      b.append(kanvas,sp);
+      b.addEventListener('click',()=>{
+        rekam();
+        const [wx,wy]=keDunia(lebarCSS/2,tinggiCSS*0.42);
+        cascade=(cascade+1)%4;
+        const k=tambahKomponen(j,wx+cascade*KISI,wy+cascade*KISI);
+        bukaPalet(false); pinTertunda=null; pilihKomp(k); segarkan();
+      });
+      kisi7.appendChild(b);
+      gambarIkon(j,kanvas,46,34);
+    }
+  }
+}
+function pas(){
+  if(!M.komponen.length){pan={x:-30,y:-30};zoom=1;return}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const k of M.komponen){
+    x0=Math.min(x0,k.x-80);y0=Math.min(y0,k.y-80);
+    x1=Math.max(x1,k.x+80);y1=Math.max(y1,k.y+80);
+  }
+  zoom=Math.min(Math.max(Math.min(lebarCSS/(x1-x0),tinggiCSS/(y1-y0)),.7),1.5);
+  pan.x=x0-(lebarCSS/zoom-(x1-x0))/2;
+  pan.y=y0-(tinggiCSS/zoom-(y1-y0))/2;
+}
+document.getElementById('mSimpan').addEventListener('click',tutupMenu(()=>{
+  const blob=new Blob([potret()],{type:'application/json'});
+  const a=document.createElement('a');
+  const berkas=(namaProyek||'Rangkaian').replace(/[^\w\-]+/g,'_').slice(0,60);
+  a.href=URL.createObjectURL(blob); a.download=berkas+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}));
+const fBuka=document.getElementById('fBuka');
+document.getElementById('mBuka').addEventListener('click',tutupMenu(()=>fBuka.click()));
+fBuka.addEventListener('change',()=>{
+  const f=fBuka.files[0]; if(!f) return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const mentah=JSON.parse(fr.result);
+      if(!mentah.k) throw 0;
+      if(mentah.aplikasi && mentah.aplikasi!==APLIKASI)
+        throw new Error('Berkas ini bukan rangkaian '+APLIKASI);
+      const d=migrasi(mentah);
+      if(!d) throw new Error('Berkas dibuat oleh versi SASMITA yang lebih baru — '+
+        'mutakhirkan aplikasinya dulu');
+      rekam(); pakai(d); pas(); segarkan();
+    }catch(e){ elPeringatan.textContent=(e&&e.message)?e.message:'Berkas tidak bisa dibaca' }
+    fBuka.value='';
+  };
+  fr.readAsText(f);
+});
+function muatContoh(){
+  rekam();
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  const s =tambahKomponen('sumber',80,220);
+  const am=tambahKomponen('ampere',180,140);
+  const r1=tambahKomponen('resistor',300,140); r1.prop.R=100;
+  const r2=tambahKomponen('resistor',420,220); r2.prop.R=220; r2.rot=1;
+  const r3=tambahKomponen('resistor',540,220); r3.prop.R=330; r3.rot=1;
+  const g =tambahKomponen('massa',80,340);
+  const p =tambahKomponen('probe',420,140);
+  [[s.id+':0',am.id+':0'],[am.id+':1',r1.id+':0'],[r1.id+':1',r2.id+':0'],
+   [r2.id+':0',r3.id+':0'],[r2.id+':1',r3.id+':1'],[r3.id+':1',s.id+':1'],
+   [s.id+':1',g.id+':0'],[r1.id+':1',p.id+':0']].forEach(([a,b])=>sambung(a,b));
+  hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
+  pinTertunda=null; pilihKomp(null); pas(); segarkan();
+}
+
+/* ==========================================================================
+   11. PUTARAN UTAMA
+   ========================================================================== */
+/* satu pintu ke mesin: majukan waktu sebanyak dtSim, lalu turunkan arus
+   tiap kawat. dtSim = 0 berarti "hitung ulang tanpa memajukan waktu". */
+function hitung(dtSim){
+  if(!hidup) return {ok:false,alasan:'mati',V:[0],net:bikinNet(M),
+                     arusKomp:new Map(),arusKawat:new Map()};
+  const r=majuWaktu(M,dtSim);
+  r.arusKawat = r.ok ? arusPerKawat(M,r.net,r.arusKomp) : new Map();
+  if(r.ok) for(const k of M.komponen) if(k.jenis==='kapasitor'){
+    const v=Math.abs(keadaan.get(k.id)||0);
+    if(v>(vMaks.get(k.id)||0)) vMaks.set(k.id,v);
+  }
+  return r;
+}
+function segarkan(){ hasil=hitung(0); gambarUkur(); kabar(); setRiwayat() }
+function resetWaktu(){
+  resetKeadaan(); vMaks.clear(); jejak.clear(); setelanKanal.clear(); sigCtl='';
+  nolkanRekam(); segarkan();
+}
+const kurangiGerak=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function nilaiAlat(k){
+  if(!hasil||!hasil.ok) return 0;
+  const sim=x=>hasil.net.petaSimpul.get(x);
+  if(k.jenis==='probe') return hasil.V[sim(k.id+':0')]||0;
+  if(k.jenis==='volt') return (hasil.V[sim(k.id+':0')]||0)-(hasil.V[sim(k.id+':1')]||0);
+  return hasil.arusKomp.get(k.id)||0;
+}
+/* ===== dua penyangga rekaman ==============================================
+   HALUS : cuplikan setiap bingkai, antre maju-mundur (yang tertua dibuang).
+           Jaraknya rapat dan seragam -> dipakai untuk jendela pendek, dan
+           inilah yang mencegah sinyal 1 kHz berubah menjadi cacah kacau.
+   KASAR : cuplikan pada interval seragam yang digandakan bila penuh, plus
+           nilai terendah & tertinggi pada tiap selang (peak detect) ->
+           dipakai untuk rentang panjang, bentuknya tidak menipu.
+   Versi sebelumnya hanya punya satu penyangga: kalau rapat, riwayat lama
+   rusak; kalau seragam-renggang, sinyal cepat rusak. Keduanya perlu ada.
+   ========================================================================= */
+const HALUS_MAKS=4000, KASAR_MAKS=1600, HALUS_BUANG=300;
+let intervalKasar=0, tKasarAkhir=-Infinity;
+const akumKasar=new Map();
+function nolkanRekam(){ intervalKasar=0; tKasarAkhir=-Infinity; akumKasar.clear() }
+
+function rekamJejak(){
+  if(!hasil||!hasil.ok) return;
+  /* probe selalu direkam; voltmeter dan amperemeter hanya bila tombol
+     "Tampilkan di skop" pada panelnya diaktifkan */
+  const alat=M.komponen.filter(k=>k.jenis==='probe' ||
+    ((k.jenis==='volt'||k.jenis==='ampere') && k.prop.skop));
+  for(const id of [...jejak.keys()]) if(!alat.some(k=>k.id===id)) jejak.delete(id);
+  if(!alat.length) return;
+
+  for(const k of alat){
+    let j=jejak.get(k.id);
+    const baru=!j;
+    if(baru){ j={jenis:k.jenis,sat:k.jenis==='ampere'?'A':'V',
+                 halus:{t:[],v:[]},kasar:{t:[],v:[],lo:[],hi:[]}};
+              jejak.set(k.id,j) }
+    j.nama=namaAlat(k);
+    const nilai=nilaiAlat(k);
+    /* Kanal yang baru dinyalakan di tengah rekaman langsung diberi satu
+       cuplikan kasar. Tanpa ini penyangga kasarnya kosong, dan penggambar
+       yang memilihnya akan membaca indeks -1 -> undefined. */
+    if(baru){ j.kasar.t.push(tSim); j.kasar.v.push(nilai);
+              j.kasar.lo.push(nilai); j.kasar.hi.push(nilai) }
+    j.halus.t.push(tSim); j.halus.v.push(nilai);
+    if(j.halus.t.length>HALUS_MAKS+HALUS_BUANG){
+      j.halus.t.splice(0,HALUS_BUANG); j.halus.v.splice(0,HALUS_BUANG);
+    }
+    let ak=akumKasar.get(k.id);
+    if(!ak){ ak={lo:nilai,hi:nilai}; akumKasar.set(k.id,ak) }
+    if(nilai<ak.lo) ak.lo=nilai;
+    if(nilai>ak.hi) ak.hi=nilai;
+  }
+
+  if(tSim-tKasarAkhir < intervalKasar) return;
+  tKasarAkhir=tSim;
+  for(const k of alat){
+    const j=jejak.get(k.id), ak=akumKasar.get(k.id);
+    const nilai=j.halus.v[j.halus.v.length-1];
+    j.kasar.t.push(tSim); j.kasar.v.push(nilai);
+    j.kasar.lo.push(ak?ak.lo:nilai); j.kasar.hi.push(ak?ak.hi:nilai);
+    akumKasar.set(k.id,{lo:nilai,hi:nilai});
+  }
+  const contoh=jejak.get(alat[0].id);
+  if(contoh && contoh.kasar.t.length>KASAR_MAKS){
+    for(const j of jejak.values()){
+      const K=j.kasar, t=[],v=[],lo=[],hi=[];
+      for(let i=0;i<K.t.length;i+=2){
+        t.push(K.t[i]); v.push(K.v[i]);
+        /* gabungkan selubung dua selang menjadi satu, jangan dibuang */
+        lo.push(i+1<K.t.length?Math.min(K.lo[i],K.lo[i+1]):K.lo[i]);
+        hi.push(i+1<K.t.length?Math.max(K.hi[i],K.hi[i+1]):K.hi[i]);
+      }
+      j.kasar={t,v,lo,hi};
+    }
+    const n=contoh.kasar.t.length;
+    if(n>1) intervalKasar=(contoh.kasar.t[n-1]-contoh.kasar.t[0])/(n-1);
+  }
+}
+
+function bingkai(t){
+  const dt=lalu?Math.min((t-lalu)/1000,.05):0; lalu=t;
+  if(hidup&&!jeda&&dt>0){
+    hasil=hitung(dt*SKALA[iSkala]);
+    rekamJejak();
+    gambarUkur();
+  }
+  if(!kurangiGerak&&hidup&&!jeda&&hasil&&hasil.ok){
+    const laju=i=>Math.min(Math.abs(i)*K_LAJU,LAJU_MAKS);
+    M.kawat.forEach((w,i)=>{
+      const kk='w'+i;
+      geser.set(kk,(geser.get(kk)||0)+laju(hasil.arusKawat.get(i)||0)*dt);
+    });
+    for(const k of M.komponen){
+      if(k.pin.length<2) continue;
+      geser.set(k.id,(geser.get(k.id)||0)+laju(hasil.arusKomp.get(k.id)||0)*dt);
+    }
+  }
+  gambar(); gambarScope(); requestAnimationFrame(bingkai);
+}
+
+/* ==========================================================================
+   12. PEMASANGAN & PEMBARUAN (PWA)
+   Service worker hanya berjalan di http/https — TIDAK dari file://. Karena
+   itu pendaftarannya dijaga: berkas tunggal yang dibuka langsung dari folder
+   tetap berfungsi penuh, hanya tidak bisa dipasang sebagai aplikasi.
+   ========================================================================== */
+const pitaBaru=document.getElementById('pitaBaru');
+document.getElementById('bTundaBaru').addEventListener('click',()=>
+  pitaBaru.classList.remove('tampil'));
+
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      const pantau=sw=>{
+        if(!sw) return;
+        sw.addEventListener('statechange',()=>{
+          /* 'installed' + sudah ada controller = ini pembaruan, bukan pasang pertama */
+          if(sw.state==='installed' && navigator.serviceWorker.controller){
+            document.getElementById('bMuatUlang').onclick=()=>{
+              sw.postMessage({aksi:'lewatiTunggu'});
+            };
+            pitaBaru.classList.add('tampil');
+          }
+        });
+      };
+      pantau(reg.installing);
+      reg.addEventListener('updatefound',()=>pantau(reg.installing));
+      /* periksa pembaruan tiap kali aplikasi dibuka kembali */
+      document.addEventListener('visibilitychange',()=>{
+        if(!document.hidden) reg.update().catch(()=>{});
+      });
+    }).catch(()=>{});
+    let sudahMuatUlang=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(sudahMuatUlang) return;
+      sudahMuatUlang=true; location.reload();
+    });
+  });
+}
+
+/* tombol pasang: hanya muncul bila peramban menawarkannya */
+const mPasang=document.getElementById('mPasang');
+let tawaranPasang=null;
+addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); tawaranPasang=e;
+  mPasang.style.display='';
+});
+mPasang.addEventListener('click',tutupMenu(()=>{
+  if(tawaranPasang){ tawaranPasang.prompt(); tawaranPasang=null; mPasang.style.display='none' }
+}));
+addEventListener('appinstalled',()=>{ mPasang.style.display='none'; tawaranPasang=null });
+/* iOS tidak menawarkan pemasangan otomatis; beri petunjuk manualnya */
+const iOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const terpasang=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+if(iOS && !terpasang && /^https?:$/.test(location.protocol)){
+  mPasang.style.display='';
+  mPasang.querySelector('span').textContent='Cara memasang di iPhone';
+  mPasang.addEventListener('click',()=>{
+    elPeringatan.style.color=C.ok;
+    elPeringatan.textContent='Di Safari: tombol Bagikan → "Tambahkan ke Layar Utama"';
+    setTimeout(()=>{elPeringatan.textContent='';elPeringatan.style.color=''},7000);
+  });
+}
+
+addEventListener('resize',()=>ukur());
+/* Tata letak bisa berubah tanpa memicu event resize — misalnya saat panel
+   bawah mengembang. Tanpa ini, bitmap kanvas diperas CSS dan gambar bergeser
+   dari posisi uji sentuhnya. */
+if(window.ResizeObserver) new ResizeObserver(()=>ukur()).observe(cv);
+else setInterval(()=>{
+  const r=cv.getBoundingClientRect();
+  if(Math.abs(r.width-lebarCSS)>.5||Math.abs(r.height-tinggiCSS)>.5) ukur();
+},300);
+
+ukur(); setModeTampil(1); gambarIns(); muatContoh(); tumpukan.length=0; setRiwayat();
+requestAnimationFrame(bingkai);
+</script>
+</body>
+</html>
