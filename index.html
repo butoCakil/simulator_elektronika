@@ -180,6 +180,9 @@
     font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;
     border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
   .cap{font-size:9px;letter-spacing:.13em;text-transform:uppercase;
+    /* Label dan kendalinya adalah SATU satuan: kalau barisnya penuh, keduanya
+     turun bersama, bukan labelnya tertinggal di baris atas. */
+  .set{display:inline-flex;align-items:center;gap:6px;flex:none}
     color:var(--muted);margin-right:1px;white-space:nowrap}
   /* Tab kendali: tampilan awal CRO hanya layar + baris tab kecil ini, jadi
      panelnya tidak lagi memakan setengah layar HP. */
@@ -309,7 +312,7 @@
   </div>
   <div class="peringatan" id="peringatan"></div>
   <div class="pita" id="pitaBaru">
-    <span>Versi baru SASMITA tersedia</span>
+    <span>Versi baru tersedia<span id="versiBaru"></span></span>
     <button id="bMuatUlang">Muat ulang</button>
     <button id="bTundaBaru">Nanti</button>
   </div>
@@ -1005,7 +1008,7 @@ let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 let modeTampil=1;
 const MODE_NAMA=['Bersih','Nilai','Kotak','Nilai+Kotak'];
 const APLIKASI='SASMITA';
-const VERSI_APP='1.0';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='1.4';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -2330,7 +2333,7 @@ elCtl.addEventListener('click',e=>{
   if(aksi==='tkurang'){ iJendela=Math.min(iJendela+1,JENDELA.length-1); sigCtl=''; return }
   if(aksi==='ttambah'){ iJendela=Math.max(iJendela-1,0); sigCtl=''; return }
   /* pkiri/pkanan dan naik/turun ditangani oleh tekan-tahan, bukan klik */
-  if(aksi==='tutupskop'){ bukaScope(false); return }
+  if(aksi==='tutuptab'){ tabSkop=''; sigCtl=''; return }
   if(aksi==='pnol'){   posDivT=0; return }
   const st=setelanKanal.get(id); if(!st) return;
   const k=daftarTerakhir.find(x=>x.id===id);
@@ -2402,7 +2405,7 @@ function bangunKendali(daftar){
         '<button class="tab" data-tab="SET" title="Skala otomatis &amp; picu"'+
         (tabSkop==='SET'?' aria-pressed="true"':'')+'>SET</button>'+
         '<span class="tumbuh"></span>'+
-        '<button class="kecil" data-aksi="tutupskop" title="Sembunyikan osiloskop">⌄</button>'+
+        '<button class="kecil" data-aksi="tutuptab" title="Tutup panel setelan">⌃</button>'+
         '</div>';
 
   /* panel isi tab yang terbuka */
@@ -2410,37 +2413,37 @@ function bangunKendali(daftar){
   if(kanalTab){
     const st=setelanKanal.get(kanalTab.id);
     html+='<div class="tabpanel"><div class="kan">'+
-      '<span class="cap">'+(kanalTab.sat==='A'?'A/div':'V/div')+'</span>'+
-      '<span class="grp">'+
-        '<button data-id="'+kanalTab.id+'" data-aksi="vminus" title="Perkecil skala tegak">−</button>'+
-        '<span class="val">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
-        '<button data-id="'+kanalTab.id+'" data-aksi="vplus" title="Perbesar skala tegak">+</button>'+
-      '</span>'+
-      '<span class="cap">posisi</span>'+
-      '<span class="grp">'+
-        '<button data-id="'+kanalTab.id+'" data-aksi="turun" data-tahan="1" title="Turunkan — bisa ditahan">▼</button>'+
-        '<button data-id="'+kanalTab.id+'" data-aksi="naik" data-tahan="1" title="Naikkan — bisa ditahan">▲</button>'+
-      '</span>'+
-      '<span class="cap">kopling</span>'+
-      '<span class="grp"><button data-id="'+kanalTab.id+'" data-aksi="ac" '+
-        'title="DC menampilkan tumpuan searahnya, AC membuangnya"'+
-        (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button></span>'+
+      '<span class="set"><span class="cap">'+(kanalTab.sat==='A'?'A/div':'V/div')+'</span>'+
+        '<span class="grp">'+
+          '<button data-id="'+kanalTab.id+'" data-aksi="vminus" title="Perkecil skala tegak">−</button>'+
+          '<span class="val">'+fmtVdiv(deret(st)[st.iv],st.sat)+'</span>'+
+          '<button data-id="'+kanalTab.id+'" data-aksi="vplus" title="Perbesar skala tegak">+</button>'+
+        '</span></span>'+
+      '<span class="set"><span class="cap">posisi</span>'+
+        '<span class="grp">'+
+          '<button data-id="'+kanalTab.id+'" data-aksi="turun" data-tahan="1" title="Turunkan — bisa ditahan">▼</button>'+
+          '<button data-id="'+kanalTab.id+'" data-aksi="naik" data-tahan="1" title="Naikkan — bisa ditahan">▲</button>'+
+        '</span></span>'+
+      '<span class="set"><span class="cap">kopling</span>'+
+        '<span class="grp"><button data-id="'+kanalTab.id+'" data-aksi="ac" '+
+          'title="DC menampilkan tumpuan searahnya, AC membuangnya"'+
+          (st.ac?' aria-pressed="true"':'')+'>'+(st.ac?'AC':'DC')+'</button></span></span>'+
       '</div></div>';
   } else if(tabSkop==='T'){
     html+='<div class="tabpanel"><div class="kan">'+
-      '<span class="cap">time/div</span>'+
-      '<span class="grp">'+
-        '<button data-aksi="tkurang" title="Perlambat sapuan">◀</button>'+
-        '<span class="val">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X))+'</span>'+
-        '<button data-aksi="ttambah" title="Percepat sapuan">▶</button>'+
-      '</span>'+
-      '<span class="cap">geser</span>'+
-      '<span class="grp">'+
-        '<button data-aksi="pkiri" data-tahan="1" title="Ke belakang — bisa ditahan">◀</button>'+
-        '<span class="val" data-b="posT"></span>'+
-        '<button data-aksi="pkanan" data-tahan="1" title="Ke depan — bisa ditahan">▶</button>'+
-        '<button data-aksi="pnol" title="Kembali ke sinyal terkini">NOL</button>'+
-      '</span>'+
+      '<span class="set"><span class="cap">time/div</span>'+
+        '<span class="grp">'+
+          '<button data-aksi="tkurang" title="Perlambat sapuan">◀</button>'+
+          '<span class="val">'+(iJendela===0?'Semua':fmtWaktu(JENDELA[iJendela]/NDIV_X))+'</span>'+
+          '<button data-aksi="ttambah" title="Percepat sapuan">▶</button>'+
+        '</span></span>'+
+      '<span class="set"><span class="cap">geser</span>'+
+        '<span class="grp">'+
+          '<button data-aksi="pkiri" data-tahan="1" title="Ke belakang — bisa ditahan">◀</button>'+
+          '<span class="val" data-b="posT"></span>'+
+          '<button data-aksi="pkanan" data-tahan="1" title="Ke depan — bisa ditahan">▶</button>'+
+          '<button data-aksi="pnol" title="Kembali ke sinyal terkini">NOL</button>'+
+        '</span></span>'+
       '</div></div>';
   } else if(tabSkop==='SET'){
     html+='<div class="tabpanel"><div class="kan">'+
@@ -3451,6 +3454,16 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
             document.getElementById('bMuatUlang').onclick=()=>{
               sw.postMessage({aksi:'lewatiTunggu'});
             };
+            /* Tanyakan nomor versinya kepada service worker yang baru, supaya
+               pemberitahuannya menyebut versi apa yang akan dipasang. */
+            try{
+              const ch=new MessageChannel();
+              ch.port1.onmessage=ev=>{
+                const el=document.getElementById('versiBaru');
+                if(el && ev.data) el.textContent=' — '+ev.data;
+              };
+              sw.postMessage({aksi:'versi'},[ch.port2]);
+            }catch(_){}
             pitaBaru.classList.add('tampil');
           }
         });

@@ -6,7 +6,7 @@
    NAIKKAN nomor VERSI setiap kali index.html diubah, agar peramban tahu ada
    pembaruan dan simpanan lama dibersihkan.
    ========================================================================== */
-const VERSI = 'sasmita-v4';
+const VERSI = 'v1.4';
 const BERKAS = [
   './',
   './index.html',
@@ -37,7 +37,10 @@ self.addEventListener('activate', e => {
 
 /* Halaman meminta pembaruan segera setelah pengguna menekan "Muat ulang" */
 self.addEventListener('message', e => {
-  if (e.data && e.data.aksi === 'lewatiTunggu') self.skipWaiting();
+  if (!e.data) return;
+  if (e.data.aksi === 'lewatiTunggu') self.skipWaiting();
+  /* Halaman menanyakan nomor versi worker BARU, untuk ditulis di pemberitahuan */
+  if (e.data.aksi === 'versi' && e.ports && e.ports[0]) e.ports[0].postMessage(VERSI);
 });
 
 self.addEventListener('fetch', e => {
