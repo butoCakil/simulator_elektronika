@@ -6,7 +6,7 @@
    NAIKKAN nomor VERSI setiap kali index.html diubah, agar peramban tahu ada
    pembaruan dan simpanan lama dibersihkan.
    ========================================================================== */
-const VERSI = 'v1.4';
+const VERSI = 'v1.5';
 const BERKAS = [
   './',
   './index.html',
