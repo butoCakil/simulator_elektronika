@@ -419,13 +419,17 @@ function bikinNet(M){
 
 /* --- keadaan dinamis: tegangan kapasitor & arus induktor ----------------- */
 const keadaan=new Map();
+/* Keadaan kontak relay disimpan terpisah dari keadaan.
+   Nilainya boolean (tertarik atau tidak), bukan besaran kontinu, karena
+   inilah satu-satunya komponen yang keadaannya DISKRIT. */
+const keadaanRelay=new Map();
 let tSim=0;
-function resetKeadaan(){ keadaan.clear(); tSim=0 }
+function resetKeadaan(){ keadaan.clear(); keadaanRelay.clear(); tSim=0 }
 const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
 
 const FARAD = k=>Math.max(k.prop.C,1e-4)*1e-6;   /* prop.C dalam µF */
 const HENRY = k=>Math.max(k.prop.L,1e-3)*1e-3;   /* prop.L dalam mH */
-const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='elco'||k.jenis==='induktor'||k.jenis==='trafo');
+const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='elco'||k.jenis==='induktor'||k.jenis==='trafo'||k.jenis==='relay');
 
 /* ===== komponen tak-linear =================================================
    Dioda memakai persamaan Shockley. Karena arusnya eksponensial, satu kali
@@ -546,7 +550,7 @@ function nilaiSumber(x,t){
    tengah bingkai — lalu tiap substep hanya mengisi angka. */
 function susunRencana(M,net){
   const sim=k=>net.petaSimpul.get(k);
-  const res=[],src=[],dyn=[],nl=[],tr=[],tf=[],oa=[];
+  const res=[],src=[],dyn=[],nl=[],tr=[],tf=[],oa=[],rl=[];
   /* Beberapa komponen butuh simpul dalam yang tidak punya kaki — mis. titik
      antara resistansi belitan dan belitan ideal pada trafo. */
   let jumlahSimpul=net.jumlah;
@@ -623,6 +627,28 @@ function susunRencana(M,net){
         break;
       }
       case 'vcc': src.push({id:k.id,a,b:0,jenis:'dc',E:k.prop.V}); break;
+      case 'relay':{
+        /* Kumparan = resistansi belitan SERI dengan induktansi, memakai simpul
+           dalam — pola yang sama seperti primer trafo. Tanpa resistansi seri,
+           arus kumparan pada DC akan menanjak tanpa batas. */
+        const Rk=Math.max(k.prop.Rk,1), Lk=Math.max(k.prop.Lk,1)*1e-3;
+        const nA=simpulDalam();
+        res.push({id:k.id+'#rk',a,b:nA,g:1/Rk});
+        dyn.push({id:k.id+'#lk',a:nA,b,jenis:'L',nilai:Lk});
+        /* Kontak SPDT: NC menghantar saat kumparan MATI, NO saat kumparan
+           aktif. Keadaannya dibaca dari langkah sebelumnya (lihat komit). */
+        const aktif=!!keadaanRelay.get(k.id);
+        const com=sim(k.id+':2'), nc=sim(k.id+':3'), no=sim(k.id+':4');
+        res.push({id:k.id+'#nc',a:com,b:nc,g:aktif?1e-12:1e4});
+        res.push({id:k.id+'#no',a:com,b:no,g:aktif?1e4:1e-12});
+        /* Ambang lepas DIPAKSA di bawah ambang tarik. Kalau pemakai mengisi
+           terbalik, relay akan berdenyut tanpa henti — dijaga di sini supaya
+           kesalahan pengisian tidak berubah menjadi simulasi yang macet. */
+        const It=Math.max(k.prop.Itarik,0.01)*1e-3;
+        const Il=Math.min(Math.max(k.prop.Ilepas,0)*1e-3, It*0.9);
+        rl.push({id:k.id,idL:k.id+'#lk',Itarik:It,Ilepas:Il});
+        break;
+      }
       case 'kapasitor': case 'elco':
         dyn.push({id:k.id,a,b,jenis:'C',nilai:FARAD(k)}); break;
       case 'induktor':  dyn.push({id:k.id,a,b,jenis:'L',nilai:HENRY(k)}); break;
@@ -671,7 +697,7 @@ function susunRencana(M,net){
   src.forEach(x=>x.r=baris++);
   tf.forEach(x=>x.r=baris++);      /* satu peubah arus primer per trafo */
   oa.forEach(x=>x.r=baris++);      /* satu peubah arus keluaran per op-amp */
-  return {n,N:baris,res,src,dyn,nl,tr,tf,oa,jumlah:jumlahSimpul};
+  return {n,N:baris,res,src,dyn,nl,tr,tf,oa,rl,jumlah:jumlahSimpul};
 }
 
 let bufV=null;
@@ -845,6 +871,17 @@ function komit(R){
   for(const t of R.tr) tegTrans.set(t.id,{vbe:t.vbe,vbc:t.vbc});
   for(const d of R.nl) tegDioda.set(d.id,d.v);
   for(const d of R.dyn) keadaan.set(d.id,d.akhir);
+  /* Kontak relay dievaluasi DI SINI, bukan di dalam iterasi Newton: keadaan
+     diskrit yang berubah di tengah iterasi akan membuat Newton berayun dan
+     tidak pernah konvergen. Histeresis (ambang tarik > ambang lepas) mencegah
+     kontak berdenyut di sekitar ambang — persis alasan relay nyata pun
+     dirancang begitu. */
+  for(const r of R.rl){
+    const i=Math.abs(keadaan.get(r.idL)||0);
+    const aktif=!!keadaanRelay.get(r.id);
+    if(!aktif && i>=r.Itarik)      keadaanRelay.set(r.id,true);
+    else if(aktif && i<=r.Ilepas)  keadaanRelay.set(r.id,false);
+  }
 }
 
 /* Maju sejumlah waktu simulasi.
@@ -944,6 +981,13 @@ function arusPerKawat(M,net,arusKomp){
     if(k.jenis==='vcc'){
       /* satu kaki eksplisit; kaki lainnya adalah GND implisit (node 0) */
       tambah(k.id+':0', -(arusKomp.get(k.id)||0));
+      continue;
+    }
+    if(k.jenis==='relay'){
+      const irk=arusKomp.get(k.id+'#rk')||0, ilk=arusKomp.get(k.id+'#lk')||0;
+      const inc=arusKomp.get(k.id+'#nc')||0, ino=arusKomp.get(k.id+'#no')||0;
+      tambah(k.id+':0',-irk); tambah(k.id+':1',ilk);
+      tambah(k.id+':2',-(inc+ino)); tambah(k.id+':3',inc); tambah(k.id+':4',ino);
       continue;
     }
     if(k.jenis==='spdt'){
@@ -1167,6 +1211,15 @@ const JENIS={
     field:[{k:'tutup',nm:'Posisi',jenis:'daftar',
             opsi:[{v:0,t:'Lempar A'},{v:1,t:'Lempar B'}]}],
     gambar:gDPDT},
+  relay:{nama:'Relay SPDT',pin:[[-P,-P],[-P,P],[P,0],[P,-P],[P,P]],kotak:[-P,-P,P,P],
+    prop:{Rk:400,Lk:500,Itarik:20,Ilepas:8},
+    field:[{k:'Rk',nm:'Pilih relay umum',jenis:'daftar',opsi:[
+              {v:70,t:'5 V  (70 Ω)'},{v:400,t:'12 V  (400 Ω)'},{v:1600,t:'24 V  (1600 Ω)'}]},
+           {k:'Rk',nm:'Resistansi kumparan',sat:'Ω',jenis:'angka',min:10,max:10000,step:1,log:true},
+           {k:'Lk',nm:'Induktansi kumparan',sat:'mH',jenis:'angka',min:1,max:5000,step:1,log:true},
+           {k:'Itarik',nm:'Arus tarik',sat:'mA',jenis:'angka',min:.1,max:500,step:.1,log:true},
+           {k:'Ilepas',nm:'Arus lepas',sat:'mA',jenis:'angka',min:.05,max:500,step:.05,log:true}],
+    gambar:gRelay},
   dioda4:{nama:'Dioda Jembatan',pin:[[0,-P],[0,P],[P,0],[-P,0]],kotak:[-P,-P,P,P],
     prop:{},field:[],gambar:gDioda4},
   /* Titik cabang: tidak punya sifat listrik apa pun, hanya menyatukan kawat.
@@ -1181,7 +1234,7 @@ const KELOMPOK=[
   {nama:'Transistor',         isi:['npn','pnp']},
   {nama:'Op-amp',             isi:['opamp']},
   {nama:'Alat ukur',          isi:['ampere','volt','probe']},
-  {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','simpul']}
+  {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','relay','simpul']}
 ];
 const URUT=KELOMPOK.reduce((a,g)=>a.concat(g.isi),[]);
 
@@ -1197,7 +1250,7 @@ const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
 const VERSI_APP='2.2';     /* naikkan bersama nomor VERSI di sw.js */
-const VERSI_BERKAS=2.2;      /* naikkan bila bentuk berkas simpanan berubah */
+const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
 let lalu=0;                         /* penanda waktu bingkai sebelumnya */
@@ -2150,6 +2203,41 @@ function diodaSisi(ax,ay,bx,by){
   ctx.lineTo(mx+ux*h/2-nx*s, my+uy*h/2-ny*s);
   ctx.stroke();
 }
+function gRelay(k){
+  const aktif=!!keadaanRelay.get(k.id);
+  /* --- kumparan di kiri: kotak dengan garis miring, lambang baku relay --- */
+  garisJalur([[-P,-P],[-30,-P],[-30,-18]],C.copper,TEBAL);
+  garisJalur([[-30,18],[-30,P],[-P,P]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath(); ctx.rect(-38,-18,16,36); ctx.stroke();
+  ctx.lineWidth=tbl(TEBAL_HALUS);
+  ctx.beginPath(); ctx.moveTo(-38,18); ctx.lineTo(-22,-18); ctx.stroke();
+
+  /* --- kontak di kanan: jangkar berporos, dua titik lemparan --- */
+  const poros=[14,0], tNC=[30,-22], tNO=[30,22];
+  garisJalur([[P,0],poros],C.copper,TEBAL);
+  garisJalur([tNC,[P,-P]],C.copper,TEBAL);
+  garisJalur([tNO,[P,P]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+  [poros,tNC,tNO].forEach(([x,y])=>{
+    ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke();
+  });
+  /* jangkar menempel ke NC saat kumparan mati, ke NO saat aktif */
+  garisJalur([poros, aktif?tNO:tNC], aktif?C.ok:C.copper, TEBAL);
+
+  /* --- garis putus: kaitan mekanis kumparan ke jangkar --- */
+  ctx.strokeStyle=aktif?'rgba(99,164,140,.7)':'rgba(127,160,163,.45)';
+  ctx.lineWidth=px(1.3); ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(-22,0);ctx.lineTo(10,0);ctx.stroke();
+  ctx.setLineDash([]);
+
+  sbl('NC',34,-30,'left',3); sbl('NO',34,30,'left',3);
+  if(terbaca()){
+    const i=Math.abs(hasil.arusKomp.get(k.id+'#lk')||0);
+    tks(fmtA(i),-30,-30,C.charge,10,'center',2);
+    tks(aktif?'AKTIF':'lepas',-30,30,aktif?C.ok:C.muted,10,'center',2);
+  }
+}
 function gDioda4(k){
   /* Belah ketupat: ~ di atas & bawah, − di kiri, + di kanan. Keempat dioda
      menunjuk ke arah kanan, persis seperti jalur konduksi sebenarnya:
@@ -2283,7 +2371,7 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2) continue;
       let p,q,I;
-      if(k.jenis==='dioda4'){ continue }       /* empat cabang, tak ada satu "jalur utama" */
+      if(k.jenis==='dioda4'||k.jenis==='relay'){ continue }  /* banyak cabang, tak ada satu "jalur utama" */
       if(k.jenis==='spdt'){
         const aA=k.prop.tutup?'#b':'#a';
         I=hasil.arusKomp.get(k.id+aA)||0; p=posPin(k,0); q=posPin(k,k.prop.tutup?2:1);
@@ -2351,7 +2439,7 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2||k.jenis==='volt'||k.jenis==='ampere'||k.jenis==='opamp'
          ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio'
-         ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt') continue;
+         ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt'||k.jenis==='relay') continue;
       const [x,y]=putar(k,0,JENIS[k.jenis].kotak[3]);
       tks(fmtA(hasil.arusKomp.get(k.id)||0), x, y+px(13), C.silk,10);
     }
