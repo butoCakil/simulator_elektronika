@@ -429,7 +429,7 @@ const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
 
 const FARAD = k=>Math.max(k.prop.C,1e-4)*1e-6;   /* prop.C dalam µF */
 const HENRY = k=>Math.max(k.prop.L,1e-3)*1e-3;   /* prop.L dalam mH */
-const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='elco'||k.jenis==='induktor'||k.jenis==='trafo'||k.jenis==='relay');
+const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='elco'||k.jenis==='induktor'||k.jenis==='trafo'||k.jenis==='relay'||k.jenis==='relay2');
 
 /* ===== komponen tak-linear =================================================
    Dioda memakai persamaan Shockley. Karena arusnya eksponensial, satu kali
@@ -647,6 +647,25 @@ function susunRencana(M,net){
         const It=Math.max(k.prop.Itarik,0.01)*1e-3;
         const Il=Math.min(Math.max(k.prop.Ilepas,0)*1e-3, It*0.9);
         rl.push({id:k.id,idL:k.id+'#lk',Itarik:It,Ilepas:Il});
+        break;
+      }
+      case 'relay2':{
+        /* Sama persis dengan relay SPDT, hanya kontaknya dua pasang yang
+           digerakkan oleh SATU kumparan — jadi keadaannya pun satu. */
+        const Rk=Math.max(k.prop.Rk,1), Lk=Math.max(k.prop.Lk,1)*1e-3;
+        const nA=simpulDalam();
+        res.push({id:k.id+'#rk',a,b:nA,g:1/Rk});
+        dyn.push({id:k.id+'#lk',a:nA,b,jenis:'L',nilai:Lk});
+        const aktif=!!keadaanRelay.get(k.id);
+        const com1=sim(k.id+':2'), nc1=sim(k.id+':3'), no1=sim(k.id+':4');
+        const com2=sim(k.id+':5'), nc2=sim(k.id+':6'), no2=sim(k.id+':7');
+        res.push({id:k.id+'#nc1',a:com1,b:nc1,g:aktif?1e-12:1e4});
+        res.push({id:k.id+'#no1',a:com1,b:no1,g:aktif?1e4:1e-12});
+        res.push({id:k.id+'#nc2',a:com2,b:nc2,g:aktif?1e-12:1e4});
+        res.push({id:k.id+'#no2',a:com2,b:no2,g:aktif?1e4:1e-12});
+        const It2=Math.max(k.prop.Itarik,0.01)*1e-3;
+        const Il2=Math.min(Math.max(k.prop.Ilepas,0)*1e-3, It2*0.9);
+        rl.push({id:k.id,idL:k.id+'#lk',Itarik:It2,Ilepas:Il2});
         break;
       }
       case 'kapasitor': case 'elco':
@@ -983,6 +1002,15 @@ function arusPerKawat(M,net,arusKomp){
       tambah(k.id+':0', -(arusKomp.get(k.id)||0));
       continue;
     }
+    if(k.jenis==='relay2'){
+      const irk=arusKomp.get(k.id+'#rk')||0, ilk=arusKomp.get(k.id+'#lk')||0;
+      const c1=arusKomp.get(k.id+'#nc1')||0, o1=arusKomp.get(k.id+'#no1')||0;
+      const c2=arusKomp.get(k.id+'#nc2')||0, o2=arusKomp.get(k.id+'#no2')||0;
+      tambah(k.id+':0',-irk); tambah(k.id+':1',ilk);
+      tambah(k.id+':2',-(c1+o1)); tambah(k.id+':3',c1); tambah(k.id+':4',o1);
+      tambah(k.id+':5',-(c2+o2)); tambah(k.id+':6',c2); tambah(k.id+':7',o2);
+      continue;
+    }
     if(k.jenis==='relay'){
       const irk=arusKomp.get(k.id+'#rk')||0, ilk=arusKomp.get(k.id+'#lk')||0;
       const inc=arusKomp.get(k.id+'#nc')||0, ino=arusKomp.get(k.id+'#no')||0;
@@ -1154,10 +1182,15 @@ const JENIS={
     gambar:gZener},
   sumberac:{nama:'Sumber AC',pin:[[0,-P],[0,P]],kotak:[-20,-P,20,P],
     prop:{Vp:12,f:50,ofs:0,fase:0,bentuk:0},
-    field:[{k:'Vp',nm:'Tegangan puncak',sat:'V',jenis:'angka',min:.001,max:50,step:.001},
+    /* Batas 400 V, bukan 250: tegangan PLN 220 V itu nilai EFEKTIF, dan
+       puncaknya 220x akar2 = 311 V. Dengan batas 250 V, contoh catu daya
+       trafo bawaan (Vp=311) justru akan terpangkas begitu field ini disentuh. */
+    field:[{k:'Vp',nm:'Tegangan puncak',sat:'V',jenis:'angka',min:.001,max:400,step:.001,log:true},
            {k:'Vp',nm:'Pilih tegangan',jenis:'daftar',opsi:[
               {v:.01,t:'10 mV'},{v:.05,t:'50 mV'},{v:.1,t:'100 mV'},{v:.5,t:'500 mV'},
-              {v:1,t:'1 V'},{v:5,t:'5 V'},{v:12,t:'12 V'},{v:24,t:'24 V'}]},
+              {v:1,t:'1 V'},{v:5,t:'5 V'},{v:12,t:'12 V'},{v:24,t:'24 V'},
+              {v:50,t:'50 V'},{v:100,t:'100 V'},{v:155.6,t:'110 V PLN (puncak 155,6 V)'},
+              {v:311.1,t:'220 V PLN (puncak 311,1 V)'}]},
            {k:'f',nm:'Frekuensi',sat:'Hz',jenis:'angka',min:.5,max:5000,step:.5},
            {k:'f',nm:'Pilih frekuensi',jenis:'daftar',opsi:[
               {v:1,t:'1 Hz (pelan)'},{v:10,t:'10 Hz'},{v:50,t:'50 Hz (PLN)'},
@@ -1211,7 +1244,9 @@ const JENIS={
     field:[{k:'tutup',nm:'Posisi',jenis:'daftar',
             opsi:[{v:0,t:'Lempar A'},{v:1,t:'Lempar B'}]}],
     gambar:gDPDT},
-  relay:{nama:'Relay SPDT',pin:[[-P,-P],[-P,P],[P,0],[P,-P],[P,P]],kotak:[-P,-P,P,P],
+  /* Susunan kaki mengikuti lambang relay baku: kumparan di kiri, kontak di
+     sisi atas dan bawah — bukan berjejer di kanan seperti versi sebelumnya. */
+  relay:{nama:'Relay SPDT',pin:[[-26,-P],[-26,P],[10,P],[2,-P],[30,-P]],kotak:[-P,-P,P,P],
     prop:{Rk:400,Lk:500,Itarik:20,Ilepas:8},
     field:[{k:'Rk',nm:'Pilih relay umum',jenis:'daftar',opsi:[
               {v:70,t:'5 V  (70 Ω)'},{v:400,t:'12 V  (400 Ω)'},{v:1600,t:'24 V  (1600 Ω)'}]},
@@ -1220,6 +1255,17 @@ const JENIS={
            {k:'Itarik',nm:'Arus tarik',sat:'mA',jenis:'angka',min:.1,max:500,step:.1,log:true},
            {k:'Ilepas',nm:'Arus lepas',sat:'mA',jenis:'angka',min:.05,max:500,step:.05,log:true}],
     gambar:gRelay},
+  relay2:{nama:'Relay DPDT',
+    pin:[[-56,-P],[-56,P],[-20,P],[-28,-P],[0,-P],[30,P],[22,-P],[50,-P]],
+    kotak:[-70,-P,70,P],
+    prop:{Rk:400,Lk:500,Itarik:20,Ilepas:8},
+    field:[{k:'Rk',nm:'Pilih relay umum',jenis:'daftar',opsi:[
+              {v:70,t:'5 V  (70 Ω)'},{v:400,t:'12 V  (400 Ω)'},{v:1600,t:'24 V  (1600 Ω)'}]},
+           {k:'Rk',nm:'Resistansi kumparan',sat:'Ω',jenis:'angka',min:10,max:10000,step:1,log:true},
+           {k:'Lk',nm:'Induktansi kumparan',sat:'mH',jenis:'angka',min:1,max:5000,step:1,log:true},
+           {k:'Itarik',nm:'Arus tarik',sat:'mA',jenis:'angka',min:.1,max:500,step:.1,log:true},
+           {k:'Ilepas',nm:'Arus lepas',sat:'mA',jenis:'angka',min:.05,max:500,step:.05,log:true}],
+    gambar:gRelay2},
   dioda4:{nama:'Dioda Jembatan',pin:[[0,-P],[0,P],[P,0],[-P,0]],kotak:[-P,-P,P,P],
     prop:{},field:[],gambar:gDioda4},
   /* Titik cabang: tidak punya sifat listrik apa pun, hanya menyatukan kawat.
@@ -1234,7 +1280,7 @@ const KELOMPOK=[
   {nama:'Transistor',         isi:['npn','pnp']},
   {nama:'Op-amp',             isi:['opamp']},
   {nama:'Alat ukur',          isi:['ampere','volt','probe']},
-  {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','relay','simpul']}
+  {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','relay','relay2','simpul']}
 ];
 const URUT=KELOMPOK.reduce((a,g)=>a.concat(g.isi),[]);
 
@@ -2203,40 +2249,66 @@ function diodaSisi(ax,ay,bx,by){
   ctx.lineTo(mx+ux*h/2-nx*s, my+uy*h/2-ny*s);
   ctx.stroke();
 }
-function gRelay(k){
-  const aktif=!!keadaanRelay.get(k.id);
-  /* --- kumparan di kiri: kotak dengan garis miring, lambang baku relay --- */
-  garisJalur([[-P,-P],[-30,-P],[-30,-18]],C.copper,TEBAL);
-  garisJalur([[-30,18],[-30,P],[-P,P]],C.copper,TEBAL);
+/* ===== relay ==============================================================
+   Mengikuti lambang baku: seluruh isi berada di dalam satu kotak, kumparan
+   di kiri, jangkar dihubungkan ke kumparan oleh garis putus (kaitan mekanis,
+   bukan hubungan listrik). NO digambar sebagai kontak terbuka bersudut.
+   ========================================================================= */
+function kumparanRelay(xk){
   ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
-  ctx.beginPath(); ctx.rect(-38,-18,16,36); ctx.stroke();
+  ctx.beginPath(); ctx.rect(xk-10,-11,20,22); ctx.stroke();
   ctx.lineWidth=tbl(TEBAL_HALUS);
-  ctx.beginPath(); ctx.moveTo(-38,18); ctx.lineTo(-22,-18); ctx.stroke();
-
-  /* --- kontak di kanan: jangkar berporos, dua titik lemparan --- */
-  const poros=[14,0], tNC=[30,-22], tNO=[30,22];
-  garisJalur([[P,0],poros],C.copper,TEBAL);
-  garisJalur([tNC,[P,-P]],C.copper,TEBAL);
-  garisJalur([tNO,[P,P]],C.copper,TEBAL);
+  ctx.beginPath(); ctx.moveTo(xk-10,11); ctx.lineTo(xk+10,-11); ctx.stroke();
+}
+/* Satu pasang kontak: poros di COM (bawah), NC di kiri-atas, NO di kanan-atas.
+   Jangkar bersandar ke NC saat kumparan mati, dan berpindah ke NO saat aktif. */
+function kontakRelay(xnc,xno,xcom,aktif){
+  garisJalur([[xcom,P],[xcom,16]],C.copper,TEBAL);
+  garisJalur([[xnc,-P],[xnc,-16]],C.copper,TEBAL);
+  garisJalur([[xno,-P],[xno,-16]],C.copper,TEBAL);
   ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
-  [poros,tNC,tNO].forEach(([x,y])=>{
-    ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke();
-  });
-  /* jangkar menempel ke NC saat kumparan mati, ke NO saat aktif */
-  garisJalur([poros, aktif?tNO:tNC], aktif?C.ok:C.copper, TEBAL);
-
-  /* --- garis putus: kaitan mekanis kumparan ke jangkar --- */
-  ctx.strokeStyle=aktif?'rgba(99,164,140,.7)':'rgba(127,160,163,.45)';
-  ctx.lineWidth=px(1.3); ctx.setLineDash([3,3]);
-  ctx.beginPath();ctx.moveTo(-22,0);ctx.lineTo(10,0);ctx.stroke();
+  /* poros jangkar */
+  ctx.beginPath(); ctx.arc(xcom,16,3,0,6.2832); ctx.stroke();
+  /* NC: titik kontak biasa. NO: kontak terbuka bersudut, seperti referensi. */
+  ctx.beginPath(); ctx.arc(xnc,-16,3,0,6.2832); ctx.stroke();
+  ctx.lineWidth=tbl(TEBAL_HALUS);
+  ctx.beginPath();
+  ctx.moveTo(xno-6,-16); ctx.lineTo(xno,-13); ctx.lineTo(xno,-19); ctx.closePath();
+  ctx.stroke();
+  /* jangkar: tebal, dan hijau saat tertarik supaya keadaannya langsung terbaca */
+  garisJalur([[xcom,16],[aktif?xno-4:xnc,-14]], aktif?C.ok:C.copper, TEBAL_PLAT);
+}
+function badanRelay(k,x0,x1,xk,pasangan){
+  const aktif=!!keadaanRelay.get(k.id);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL); ctx.lineJoin='miter';
+  ctx.beginPath(); ctx.rect(x0,-22,x1-x0,44); ctx.stroke();
+  /* kaki kumparan menembus kotak sampai ke gulungannya */
+  garisJalur([[xk,-P],[xk,-11]],C.copper,TEBAL);
+  garisJalur([[xk,11],[xk,P]],C.copper,TEBAL);
+  kumparanRelay(xk);
+  for(const [xnc,xno,xcom] of pasangan) kontakRelay(xnc,xno,xcom,aktif);
+  /* kaitan mekanis: dari kumparan ke poros jangkar terjauh */
+  const xAkhir=pasangan[pasangan.length-1][2];
+  ctx.strokeStyle=aktif?'rgba(99,164,140,.75)':'rgba(127,160,163,.5)';
+  ctx.lineWidth=px(1.3); ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(xk+10,0); ctx.lineTo(xAkhir,0); ctx.stroke();
   ctx.setLineDash([]);
-
-  sbl('NC',34,-30,'left',3); sbl('NO',34,30,'left',3);
   if(terbaca()){
     const i=Math.abs(hasil.arusKomp.get(k.id+'#lk')||0);
-    tks(fmtA(i),-30,-30,C.charge,10,'center',2);
-    tks(aktif?'AKTIF':'lepas',-30,30,aktif?C.ok:C.muted,10,'center',2);
+    tks(fmtA(i),xk,-30,C.charge,10,'center',2);
+    tks(aktif?'AKTIF':'lepas',xk,30,aktif?C.ok:C.muted,10,'center',2);
   }
+}
+function gRelay(k){
+  badanRelay(k,-38,38,-26,[[2,30,10]]);
+  sbl('NC',2,-30,'center',3); sbl('NO',30,-30,'center',3);
+  sbl('COM',10,30,'center',3);
+}
+function gRelay2(k){
+  badanRelay(k,-68,68,-56,[[-28,0,-20],[22,50,30]]);
+  sbl('NC1',-28,-30,'center',3); sbl('NO1',0,-30,'center',3);
+  sbl('NC2',22,-30,'center',3);  sbl('NO2',50,-30,'center',3);
+  sbl('COM1',-20,30,'center',3); sbl('COM2',30,30,'center',3);
 }
 function gDioda4(k){
   /* Belah ketupat: ~ di atas & bawah, − di kiri, + di kanan. Keempat dioda
@@ -2371,7 +2443,7 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2) continue;
       let p,q,I;
-      if(k.jenis==='dioda4'||k.jenis==='relay'){ continue }  /* banyak cabang, tak ada satu "jalur utama" */
+      if(k.jenis==='dioda4'||k.jenis==='relay'||k.jenis==='relay2'){ continue }  /* banyak cabang */
       if(k.jenis==='spdt'){
         const aA=k.prop.tutup?'#b':'#a';
         I=hasil.arusKomp.get(k.id+aA)||0; p=posPin(k,0); q=posPin(k,k.prop.tutup?2:1);
@@ -2439,7 +2511,8 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2||k.jenis==='volt'||k.jenis==='ampere'||k.jenis==='opamp'
          ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio'
-         ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt'||k.jenis==='relay') continue;
+         ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt'
+         ||k.jenis==='relay'||k.jenis==='relay2') continue;
       const [x,y]=putar(k,0,JENIS[k.jenis].kotak[3]);
       tks(fmtA(hasil.arusKomp.get(k.id)||0), x, y+px(13), C.silk,10);
     }
