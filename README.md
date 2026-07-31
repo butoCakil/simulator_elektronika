@@ -1,11 +1,11 @@
-# SASMITA — Simulator Skema Interaktif Elektronika
+# SIMBION — # Simulasi Lab Interaktif Elektronika
 
 Simulator skema elektronika untuk pembelajaran: rangkaian DC, transien RC/RL,
 dioda dan penyearah, transistor, op-amp, potensiometer, transformator, lengkap
 dengan osiloskop bergaya CRO. Satu berkas HTML, tanpa pustaka luar, **bekerja
 tanpa internet**.
 
-Alamat rencana: **https://sasmita.simbiot.id**
+Alamat rencana: **https://bion.simbiot.id**
 
 ---
 
@@ -23,22 +23,22 @@ ikon/                    ikon aplikasi (192, 512, maskable, iOS, favicon)
 
 ## Menerbitkan lewat GitHub Pages
 
-1. Buat repositori baru, misalnya `sasmita`.
+1. Buat repositori baru, misalnya `simbion`.
 2. Salin **seluruh isi folder ini ke akar repositori** (bukan ke dalam
    subfolder), lalu unggah.
 3. Di repositori: **Settings → Pages**. Bagian *Source* pilih
    `Deploy from a branch`, cabang `main`, folder `/ (root)`. Simpan.
-4. Masih di halaman itu, isi *Custom domain* dengan `sasmita.simbiot.id`
+4. Masih di halaman itu, isi *Custom domain* dengan `bion.simbiot.id`
    dan centang **Enforce HTTPS** setelah sertifikatnya terbit
    (biasanya beberapa menit sampai satu jam).
 5. Di pengelola DNS `simbiot.id`, tambahkan satu rekaman:
 
    | Tipe | Nama | Nilai |
    |---|---|---|
-   | CNAME | `sasmita` | `NAMA-AKUN-GITHUB.github.io` |
+   | CNAME | `bion` | `NAMA-AKUN-GITHUB.github.io` |
 
    Ganti `NAMA-AKUN-GITHUB` dengan nama akun Anda. Berkas `CNAME` di paket ini
-   sudah berisi `sasmita.simbiot.id`, jadi langkah 4 dan 5 saling melengkapi.
+   sudah berisi `bion.simbiot.id`, jadi langkah 4 dan 5 saling melengkapi.
 
 HTTPS itu **wajib**, bukan pilihan: service worker tidak berjalan tanpa HTTPS,
 dan tanpa service worker aplikasi tidak bisa dipasang maupun dipakai luring.
@@ -49,7 +49,7 @@ dan tanpa service worker aplikasi tidak bisa dipasang maupun dipakai luring.
 
 ### Guru — PC untuk proyektor (Windows, luring)
 
-1. Buka `https://sasmita.simbiot.id` dengan Chrome atau Edge.
+1. Buka `https://bion.simbiot.id` dengan Chrome atau Edge.
 2. Klik ikon **pasang** di ujung kanan bilah alamat, atau menu **⋯ → Pasang
    aplikasi** di dalam aplikasinya.
 3. Setelah terpasang, ada ikonnya di menu Start dan berjalan tanpa bilah
@@ -85,13 +85,13 @@ sekali. Sesudah itu aplikasinya tersimpan di perangkat dan luring seterusnya.
 
 Setiap kali `index.html` diubah:
 
-1. **Naikkan nomor versi di `sw.js`** — baris `const VERSI = 'sasmita-v1';`
-   menjadi `'sasmita-v2'`, dan seterusnya.
+1. **Naikkan nomor versi di `sw.js`** — baris `const VERSI = 'simbion-v1';`
+   menjadi `'simbion-v2'`, dan seterusnya.
 2. Unggah ulang.
 
 Tanpa langkah 1, peramban tidak tahu ada pembaruan dan pengguna akan tetap
 memakai versi lama dari simpanannya. Kalau nomornya dinaikkan, aplikasi yang
-sudah terpasang akan menampilkan pita **"Versi baru SASMITA tersedia"** dengan
+sudah terpasang akan menampilkan pita **"Versi baru SIMBION tersedia"** dengan
 tombol muat ulang.
 
 ---

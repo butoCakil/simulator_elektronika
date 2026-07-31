@@ -1,12 +1,12 @@
 /* ============================================================================
-   SASMITA — service worker
+   SIMBION — service worker
    Strategi: seluruh berkas aplikasi disimpan saat pemasangan (precache), lalu
    permintaan dilayani dari simpanan lebih dulu. Karena aplikasinya satu
    berkas HTML plus beberapa ikon, cara ini sederhana dan tahan gagal.
    NAIKKAN nomor VERSI setiap kali index.html diubah, agar peramban tahu ada
    pembaruan dan simpanan lama dibersihkan.
    ========================================================================== */
-const VERSI = 'sasmita-v2.0';
+const VERSI = 'simbion-v2.1';
 const BERKAS = [
   './',
   './index.html',

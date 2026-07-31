@@ -1,6 +1,6 @@
 {
-  "name": "SASMITA — Simulator Skema Interaktif Elektronika",
-  "short_name": "SASMITA",
+  "name": "SIMBION — Simulasi Lab Interaktif Elektronika",
+  "short_name": "SIMBION",
   "description": "Simulator skema elektronika interaktif untuk pembelajaran: rangkaian DC, transien RC/RL, dioda dan penyearah, transistor, op-amp, lengkap dengan osiloskop. Bekerja tanpa internet.",
   "lang": "id",
   "dir": "ltr",

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>SASMITA — Simulator Skema Interaktif Elektronika</title>
-<meta name="description" content="SASMITA — simulator skema elektronika interaktif: rangkaian DC, transien, dioda, penyearah, transistor, op-amp, dengan osiloskop. Bekerja tanpa internet.">
+<title>SIMBION — Simulasi Lab Interaktif Elektronika</title>
+<meta name="description" content="SIMBION — simulator skema elektronika interaktif: rangkaian DC, transien, dioda, penyearah, transistor, op-amp, dengan osiloskop. Bekerja tanpa internet.">
 <meta name="theme-color" content="#14343A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="64x64" href="ikon/favicon-64.png">
 <link rel="apple-touch-icon" href="ikon/apple-touch-icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SASMITA">
+<meta name="apple-mobile-web-app-title" content="SIMBION">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
@@ -1052,9 +1052,9 @@ let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 /* satu penanda untuk dua pilihan tampilan: bit 1 = nilai, bit 2 = kotak klik */
 let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
-const APLIKASI='SASMITA';
-const VERSI_APP='2.0';     /* naikkan bersama nomor VERSI di sw.js */
-const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
+const APLIKASI='SIMBION';
+const VERSI_APP='2.1';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
 let lalu=0;                         /* penanda waktu bingkai sebelumnya */
@@ -3447,7 +3447,7 @@ fBuka.addEventListener('change',()=>{
       if(mentah.aplikasi && mentah.aplikasi!==APLIKASI)
         throw new Error('Berkas ini bukan rangkaian '+APLIKASI);
       const d=migrasi(mentah);
-      if(!d) throw new Error('Berkas dibuat oleh versi SASMITA yang lebih baru — '+
+      if(!d) throw new Error('Berkas dibuat oleh versi SIMBION yang lebih baru — '+
         'mutakhirkan aplikasinya dulu');
       rekam(); pakai(d); pas(); segarkan();
     }catch(e){ elPeringatan.textContent=(e&&e.message)?e.message:'Berkas tidak bisa dibaca' }
@@ -3730,7 +3730,7 @@ else setInterval(()=>{
   if(Math.abs(r.width-lebarCSS)>.5||Math.abs(r.height-tinggiCSS)>.5) ukur();
 },300);
 
-document.getElementById('versiApp').textContent='SASMITA '+VERSI_APP;
+document.getElementById('versiApp').textContent='SIMBION '+VERSI_APP;
 segarkanMenu();
 ukur(); setModeTampil(1); gambarIns(); muatContoh(); tumpukan.length=0; setRiwayat();
 requestAnimationFrame(bingkai);
