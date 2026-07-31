@@ -1053,7 +1053,7 @@ let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SASMITA';
-const VERSI_APP='1.7';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='1.8';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -3308,18 +3308,43 @@ document.getElementById('mContohTrafo').addEventListener('click',tutupMenu(()=>{
 }));
 document.getElementById('mContohOA').addEventListener('click',tutupMenu(()=>{
   mulaiContoh();
-  const ac=tambahKomponen('sumberac',120,320); ac.prop.Vp=0.5; ac.prop.f=100;
-  const ri=tambahKomponen('resistor',300,240); ri.prop.R=1000;
-  const rf=tambahKomponen('resistor',480,120); rf.prop.R=10000;
-  const u =tambahKomponen('opamp',480,260); u.prop.Vsat=12;
-  const pi=tambahKomponen('probe',260,180);
-  const po=tambahKomponen('probe',640,180);
-  const g =tambahKomponen('massa',300,440);
-  [[ac.id+':0',ri.id+':0'],[ri.id+':0',pi.id+':0'],
-   [ri.id+':1',u.id+':1'],[rf.id+':0',u.id+':1'],[rf.id+':1',u.id+':2'],
-   [u.id+':2',po.id+':0'],[u.id+':0',g.id+':0'],[ac.id+':1',g.id+':0']]
-    .forEach(([a,b])=>sambung(a,b));
-  selesaiContoh(2,4);
+  
+  // Inisialisasi komponen dengan koordinat dan properti baru
+  const ac = tambahKomponen('sumberac', 120, 320); ac.prop.Vp=0.5; ac.prop.f=100;
+  const ri = tambahKomponen('resistor', 240, 240); ri.prop.R=1000;
+  const rf = tambahKomponen('resistor', 400, 160); rf.prop.R=10000;
+  
+  const u  = tambahKomponen('opamp', 400, 260); 
+  u.prop.Vsat = 12; 
+  u.rot = 2; // tambahan rotasi
+  u.cx = 1;  // tambahan flip horizontal (cx)
+  
+  const pi = tambahKomponen('probe', 120, 240);
+  const po = tambahKomponen('probe', 500, 260);
+  const g  = tambahKomponen('massa', 120, 420);
+  
+  // Penambahan komponen simpul
+  const n1 = tambahKomponen('simpul', 120, 240); // k8
+  const n2 = tambahKomponen('simpul', 320, 240); // k9
+  const n3 = tambahKomponen('simpul', 460, 260); // k10
+  
+  // Sambungan Kawat (Wiring) menggunakan simpul
+  [
+    [ac.id+':1', g.id+':0'],   // k1:1 - k7:0
+    [u.id+':0', g.id+':0'],    // k4:0 - k7:0
+    [ac.id+':0', n1.id+':0'],  // k1:0 - k8:0
+    [n1.id+':0', ri.id+':0'],  // k8:0 - k2:0
+    [pi.id+':0', n1.id+':0'],  // k5:0 - k8:0
+    [ri.id+':1', n2.id+':0'],  // k2:1 - k9:0
+    [n2.id+':0', u.id+':1'],   // k9:0 - k4:1
+    [rf.id+':0', n2.id+':0'],  // k3:0 - k9:0
+    [u.id+':2', n3.id+':0'],   // k4:2 - k10:0
+    [n3.id+':0', po.id+':0'],  // k10:0 - k6:0
+    [rf.id+':1', n3.id+':0']   // k3:1 - k10:0
+  ].forEach(([a,b])=>sambung(a,b));
+  
+  // Skala dipertahankan di 2 (Volt/div), Jendela (Time/div) diubah ke 8 (0.02 s / 20 ms)
+  selesaiContoh(2,8);
 }));
 document.getElementById('mBersih').addEventListener('click',tutupMenu(()=>{
   rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
