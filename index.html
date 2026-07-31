@@ -425,7 +425,7 @@ const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
 
 const FARAD = k=>Math.max(k.prop.C,1e-4)*1e-6;   /* prop.C dalam µF */
 const HENRY = k=>Math.max(k.prop.L,1e-3)*1e-3;   /* prop.L dalam mH */
-const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='induktor'||k.jenis==='trafo');
+const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='elco'||k.jenis==='induktor'||k.jenis==='trafo');
 
 /* ===== komponen tak-linear =================================================
    Dioda memakai persamaan Shockley. Karena arusnya eksponensial, satu kali
@@ -434,9 +434,10 @@ const adaDinamis = M=>M.komponen.some(k=>k.jenis==='kapasitor'||k.jenis==='induk
    ========================================================================= */
 const VT=0.025852;                     /* kT/q pada suhu ruang */
 const DIODA_JENIS={
-  dioda : {Is:2.52e-9, n:1.752, Vz:0,  Ibv:0},      /* mirip 1N4148 */
-  led   : {Is:3.2e-19, n:2.0,   Vz:0,  Ibv:0},      /* Vf sekitar 2 V */
-  zener : {Is:1e-9,    n:1.0,   Vz:5.1,Ibv:1e-6}    /* Vz dari properti */
+  dioda     : {Is:2.52e-9, n:1.752, Vz:0,  Ibv:0},  /* mirip 1N4148 */
+  led       : {Is:3.2e-19, n:2.0,   Vz:0,  Ibv:0},  /* Vf sekitar 2 V */
+  zener     : {Is:1e-9,    n:1.0,   Vz:5.1,Ibv:1e-6},/* Vz dari properti */
+  fotodioda : {Is:2.52e-9, n:1.752, Vz:0,  Ibv:0}   /* sambungan sama; bedanya arus foto */
 };
 /* exp dipotong secara linear di atas 80 supaya tidak meluap menjadi Infinity */
 const EXP_BATAS=60;
@@ -519,9 +520,25 @@ const tegTrans=new Map();     /* {vbe,vbc} awal iterasi berikutnya */
 const tegDioda=new Map();              /* tegangan dioda, awal iterasi berikutnya */
 
 /* nilai sumber pada saat t (AC dievaluasi di ujung langkah) */
+/* Bentuk gelombang: 0 sinus, 1 segitiga, 2 gigi gergaji, 3 kotak — kode
+   angka, bukan teks, mengikuti konvensi yang sudah dipakai untuk warna LED.
+   Ketiga bentuk non-sinus dibangun dari fase ternormalisasi 0..1 agar
+   rumusnya tidak bergantung pada frekuensi. */
+function bentukGelombang(kode,ph){
+  switch(kode|0){
+    case 1: return ph<0.5 ? 4*ph-1 : 3-4*ph;      /* segitiga, -1..1 */
+    case 2: return 2*ph-1;                        /* gigi gergaji, naik */
+    case 3: return ph<0.5 ? 1 : -1;                /* kotak, duty 50% */
+    default: return Math.sin(ph*2*Math.PI);        /* sinus */
+  }
+}
 function nilaiSumber(x,t){
   if(x.jenis==='ampere') return 0;
-  if(x.jenis==='ac') return x.ofs + x.Vp*Math.sin(2*Math.PI*x.f*t + x.fase*Math.PI/180);
+  if(x.jenis==='ac'){
+    const th=2*Math.PI*x.f*t + x.fase*Math.PI/180;
+    const ph=((th/(2*Math.PI))%1+1)%1;
+    return x.ofs + x.Vp*bentukGelombang(x.bentuk,ph);
+  }
   return x.E;
 }
 
@@ -571,9 +588,52 @@ function susunRencana(M,net){
                  vd:tegOA.has(k.id)?tegOA.get(k.id):0});
         break;
       }
-      case 'saklar':    res.push({id:k.id,a,b,g:k.prop.tutup?1e4:1e-12}); break;
-      case 'kapasitor': dyn.push({id:k.id,a,b,jenis:'C',nilai:FARAD(k)}); break;
+      /* Push button momentar memakai kondisi 'tutup' yang sama dengan
+         saklar biasa — bedanya prop.tutup diubah sesaat oleh tekan-tahan
+         di kanvas (lihat pointerdown/lepas), bukan oleh ketukan tetap. */
+      case 'saklar': case 'pbno': case 'pbnc':
+        res.push({id:k.id,a,b,g:k.prop.tutup?1e4:1e-12}); break;
+      case 'spdt':{
+        const b1=sim(k.id+':1'), b2=sim(k.id+':2');
+        res.push({id:k.id+'#a',a,b:b1,g:k.prop.tutup?1e-12:1e4});
+        res.push({id:k.id+'#b',a,b:b2,g:k.prop.tutup?1e4:1e-12});
+        break;
+      }
+      case 'dpdt':{
+        const b1=sim(k.id+':1'), b2=sim(k.id+':2');
+        const c2=sim(k.id+':3'), b3=sim(k.id+':4'), b4=sim(k.id+':5');
+        res.push({id:k.id+'#a1',a,b:b1,g:k.prop.tutup?1e-12:1e4});
+        res.push({id:k.id+'#b1',a,b:b2,g:k.prop.tutup?1e4:1e-12});
+        res.push({id:k.id+'#a2',a:c2,b:b3,g:k.prop.tutup?1e-12:1e4});
+        res.push({id:k.id+'#b2',a:c2,b:b4,g:k.prop.tutup?1e4:1e-12});
+        break;
+      }
+      case 'dioda4':{
+        /* Jembatan 4-dioda dalam satu simbol. Kaki: 0=AC1,1=AC2,2=DC+,3=DC-.
+           Dipakai kembali persamaan dioda yang sama, hanya pasangan
+           simpulnya yang berbeda untuk masing-masing dari 4 cabang. */
+        const dcp=sim(k.id+':2'), dcm=sim(k.id+':3');
+        const dJ=DIODA_JENIS.dioda, nvt=dJ.n*VT;
+        const vk=nvt*Math.log(nvt/(Math.SQRT2*dJ.Is));
+        [['#1',a,dcp],['#2',b,dcp],['#3',dcm,a],['#4',dcm,b]].forEach(([sf,pa,pb])=>{
+          const id=k.id+sf;
+          nl.push({id,a:pa,b:pb,p:dJ,nvt,vkritis:vk,vkritisBD:0,
+                    v:tegDioda.has(id)?tegDioda.get(id):0,iph:0});
+        });
+        break;
+      }
+      case 'vcc': src.push({id:k.id,a,b:0,jenis:'dc',E:k.prop.V}); break;
+      case 'kapasitor': case 'elco':
+        dyn.push({id:k.id,a,b,jenis:'C',nilai:FARAD(k)}); break;
       case 'induktor':  dyn.push({id:k.id,a,b,jenis:'L',nilai:HENRY(k)}); break;
+      case 'bohlam':    res.push({id:k.id,a,b,g:1/Math.max(k.prop.R,1e-6)}); break;
+      case 'ldr':{
+        const p=Math.min(Math.max(k.prop.pos,0),1);
+        const Rg=Math.max(k.prop.Rgelap,1), Rt=Math.max(k.prop.Rterang,1e-3);
+        const R=Rg*Math.pow(Rt/Rg,p);
+        res.push({id:k.id,a,b,g:1/Math.max(R,1e-3)});
+        break;
+      }
       case 'sumber':    src.push({id:k.id,a,b,jenis:'dc',E:k.prop.E}); break;
       case 'sumberac':  src.push({id:k.id,a,b,jenis:'ac',Vp:k.prop.Vp,f:k.prop.f,
                                   ofs:k.prop.ofs||0,fase:k.prop.fase||0}); break;
@@ -589,14 +649,19 @@ function susunRencana(M,net){
                  vbe:lalu.vbe, vbc:lalu.vbc});
         break;
       }
-      case 'dioda': case 'led': case 'zener':{
+      case 'dioda': case 'led': case 'zener': case 'fotodioda':{
         const d=Object.assign({},DIODA_JENIS[k.jenis]);
         if(k.jenis==='zener') d.Vz=Math.max(k.prop.Vz,0.5);
         const nvt=d.n*VT;
+        /* Fotodioda: cahaya menyuntikkan arus balik konstan (Iph), tidak
+           berubah oleh iterasi Newton — hanya mengimbangi arus Shockley di
+           langkahRencana lewat medan iph. */
+        const iph = k.jenis==='fotodioda'
+          ? Math.max(k.prop.Isc,0)*1e-6*Math.min(Math.max(k.prop.pos,0),1) : 0;
         nl.push({id:k.id,a,b,p:d,nvt,
                  vkritis:nvt*Math.log(nvt/(Math.SQRT2*d.Is)),
                  vkritisBD:d.Ibv>0?nvt*Math.log(nvt/(Math.SQRT2*d.Ibv)):0,
-                 v:tegDioda.has(k.id)?tegDioda.get(k.id):0});
+                 v:tegDioda.has(k.id)?tegDioda.get(k.id):0, iph});
         break;
       }
     }
@@ -642,9 +707,12 @@ function langkahRencana(R,h,penuh,tUjung){
     }
     for(const d of R.nl){                 /* linearisasi di sekitar d.v */
       const {I,g}=arusDioda(d.p,d.v);
-      d.g=g; d.Ilin=I;
+      /* iph (fotodioda) adalah arus tetap yang MENGURANGI arus Shockley —
+         konstan terhadap tegangan, jadi tidak mengubah konduktansi g. */
+      const Itot=I-(d.iph||0);
+      d.g=g; d.Ilin=Itot;
       G(d.a,d.b,g);
-      Isrc(d.a,d.b,I-g*d.v);
+      Isrc(d.a,d.b,Itot-g*d.v);
     }
     for(const t of R.tr){
       const sg=t.p.sg;
@@ -747,7 +815,7 @@ function langkahRencana(R,h,penuh,tUjung){
   if(penuh){
     for(const e of R.res) arusKomp.set(e.id,(V[e.a]-V[e.b])*e.g);
     for(const q of R.src) arusKomp.set(q.id,x[q.r]);
-    for(const d of R.nl) arusKomp.set(d.id,arusDioda(d.p,V[d.a]-V[d.b]).I);
+    for(const d of R.nl) arusKomp.set(d.id,arusDioda(d.p,V[d.a]-V[d.b]).I-(d.iph||0));
     for(const w of R.tf){
       arusKomp.set(w.id,x[w.r]);
       arusKomp.set(w.id+'#s',-x[w.r]/w.n);
@@ -873,6 +941,30 @@ function arusPerKawat(M,net,arusKomp){
   const pinMassa=[];
   for(const k of M.komponen){
     if(k.jenis==='massa'){ pinMassa.push(k.id+':0'); tambah(k.id+':0',0); continue }
+    if(k.jenis==='vcc'){
+      /* satu kaki eksplisit; kaki lainnya adalah GND implisit (node 0) */
+      tambah(k.id+':0', -(arusKomp.get(k.id)||0));
+      continue;
+    }
+    if(k.jenis==='spdt'){
+      const ia=arusKomp.get(k.id+'#a')||0, ib=arusKomp.get(k.id+'#b')||0;
+      tambah(k.id+':0', -(ia+ib)); tambah(k.id+':1', ia); tambah(k.id+':2', ib);
+      continue;
+    }
+    if(k.jenis==='dpdt'){
+      const ia1=arusKomp.get(k.id+'#a1')||0, ib1=arusKomp.get(k.id+'#b1')||0;
+      const ia2=arusKomp.get(k.id+'#a2')||0, ib2=arusKomp.get(k.id+'#b2')||0;
+      tambah(k.id+':0', -(ia1+ib1)); tambah(k.id+':1', ia1); tambah(k.id+':2', ib1);
+      tambah(k.id+':3', -(ia2+ib2)); tambah(k.id+':4', ia2); tambah(k.id+':5', ib2);
+      continue;
+    }
+    if(k.jenis==='dioda4'){
+      const I1=arusKomp.get(k.id+'#1')||0, I2=arusKomp.get(k.id+'#2')||0,
+            I3=arusKomp.get(k.id+'#3')||0, I4=arusKomp.get(k.id+'#4')||0;
+      tambah(k.id+':0', -I1+I3); tambah(k.id+':1', -I2+I4);
+      tambah(k.id+':2', I1+I2);  tambah(k.id+':3', -I3-I4);
+      continue;
+    }
     if(k.jenis==='potensio'){
       const ia=arusKomp.get(k.id+'#a')||0, ib=arusKomp.get(k.id+'#b')||0;
       tambah(k.id+':0',-ia); tambah(k.id+':1',ia-ib); tambah(k.id+':2',ib);
@@ -1017,7 +1109,7 @@ const JENIS={
            {k:'Vz',nm:'Pilih nilai umum',jenis:'daftar',fmt:'volt',opsi:[3.3,4.7,5.1,6.2,9.1,12,15]}],
     gambar:gZener},
   sumberac:{nama:'Sumber AC',pin:[[0,-P],[0,P]],kotak:[-20,-P,20,P],
-    prop:{Vp:12,f:50,ofs:0,fase:0},
+    prop:{Vp:12,f:50,ofs:0,fase:0,bentuk:0},
     field:[{k:'Vp',nm:'Tegangan puncak',sat:'V',jenis:'angka',min:.001,max:50,step:.001},
            {k:'Vp',nm:'Pilih tegangan',jenis:'daftar',opsi:[
               {v:.01,t:'10 mV'},{v:.05,t:'50 mV'},{v:.1,t:'100 mV'},{v:.5,t:'500 mV'},
@@ -1025,21 +1117,71 @@ const JENIS={
            {k:'f',nm:'Frekuensi',sat:'Hz',jenis:'angka',min:.5,max:5000,step:.5},
            {k:'f',nm:'Pilih frekuensi',jenis:'daftar',opsi:[
               {v:1,t:'1 Hz (pelan)'},{v:10,t:'10 Hz'},{v:50,t:'50 Hz (PLN)'},
-              {v:60,t:'60 Hz'},{v:1000,t:'1 kHz'}]}],
+              {v:60,t:'60 Hz'},{v:1000,t:'1 kHz'}]},
+           {k:'bentuk',nm:'Bentuk gelombang',jenis:'daftar',opsi:[
+              {v:0,t:'Sinus'},{v:1,t:'Segitiga'},{v:2,t:'Gigi gergaji'},{v:3,t:'Kotak'}]}],
     gambar:gSumberAC},
+  vcc:{nama:'VCC',pin:[[0,20]],kotak:[-15,-24,15,20],prop:{V:5},
+    field:[{k:'V',nm:'Tegangan',sat:'V',jenis:'angka',min:0,max:60,step:.1},
+           {k:'V',nm:'Pilih nilai umum',jenis:'daftar',fmt:'volt',opsi:[3.3,5,9,12,15,24]}],
+    gambar:gVCC},
   massa:{nama:'Massa (GND)',pin:[[0,-20]],kotak:[-15,-20,15,15],prop:{},field:[],gambar:gMassa},
+  elco:{nama:'Kapasitor Elco',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{C:100},
+    field:[{k:'C',nm:'Kapasitansi',sat:'µF',jenis:'angka',min:.1,max:1e5,step:.1,log:true},
+           {k:'C',nm:'Pilih nilai umum',jenis:'daftar',fmt:'farad',
+            opsi:[1,2.2,4.7,10,22,47,100,220,470,1000,2200,4700,10000]}],
+    gambar:gElco},
+  bohlam:{nama:'Bohlam',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{R:100,Pn:1},
+    field:[{k:'R',nm:'Resistansi filamen',sat:'Ω',jenis:'angka',min:1,max:10000,step:1,log:true},
+           {k:'R',nm:'Pilih nilai umum',jenis:'daftar',fmt:'ohm',opsi:[12,22,47,100,220,470,1000]},
+           {k:'Pn',nm:'Daya nyala penuh',sat:'W',jenis:'angka',min:.01,max:100,step:.01}],
+    gambar:gBohlam},
+  ldr:{nama:'LDR',pin:[[-P,0],[P,0]],kotak:[-P,-22,P,22],
+    tuas:[{dx:-18,dy:-52,aksi:'kurang'},{dx:18,dy:-52,aksi:'tambah'}],
+    prop:{pos:.5,Rgelap:1e6,Rterang:100},
+    field:[{k:'pos',nm:'Tingkat cahaya',sat:'',jenis:'angka',min:0,max:1,step:.01},
+           {k:'Rgelap',nm:'Resistansi gelap',sat:'Ω',jenis:'angka',min:1000,max:1e7,step:1000,log:true},
+           {k:'Rterang',nm:'Resistansi terang',sat:'Ω',jenis:'angka',min:10,max:1e5,step:10,log:true}],
+    gambar:gLDR},
+  fotodioda:{nama:'Fotodioda',pin:[[-P,0],[P,0]],kotak:[-P,-22,P,22],
+    tuas:[{dx:-18,dy:-52,aksi:'kurang'},{dx:18,dy:-52,aksi:'tambah'}],
+    prop:{pos:.5,Isc:500},
+    field:[{k:'pos',nm:'Tingkat cahaya',sat:'',jenis:'angka',min:0,max:1,step:.01},
+           {k:'Isc',nm:'Arus hubung-singkat @ terang penuh',sat:'µA',jenis:'angka',
+            min:1,max:5000,step:1,log:true}],
+    gambar:gFotodioda},
+  pbno:{nama:'Push Button (NO)',pin:[[-P,0],[P,0]],kotak:[-P,-24,P,9],
+    tuas:[{dx:0,dy:-34,aksi:'tekanNO'}],prop:{tutup:0},field:[],
+    gambar:k=>gPushButton(k,true)},
+  pbnc:{nama:'Push Button (NC)',pin:[[-P,0],[P,0]],kotak:[-P,-24,P,9],
+    tuas:[{dx:0,dy:-34,aksi:'tekanNC'}],prop:{tutup:1},field:[],
+    gambar:k=>gPushButton(k,false)},
+  spdt:{nama:'Saklar SPDT',pin:[[-P,0],[P,-20],[P,20]],kotak:[-P,-30,P,30],
+    tuas:[{dx:16,dy:-30,aksi:'toggle'}],prop:{tutup:0},
+    field:[{k:'tutup',nm:'Posisi',jenis:'daftar',
+            opsi:[{v:0,t:'Lempar A (atas)'},{v:1,t:'Lempar B (bawah)'}]}],
+    gambar:gSPDT},
+  dpdt:{nama:'Saklar DPDT',pin:[[-P,-30],[P,-46],[P,-14],[-P,30],[P,14],[P,46]],
+    kotak:[-P,-56,P,56],
+    tuas:[{dx:16,dy:0,aksi:'toggle'}],prop:{tutup:0},
+    field:[{k:'tutup',nm:'Posisi',jenis:'daftar',
+            opsi:[{v:0,t:'Lempar A'},{v:1,t:'Lempar B'}]}],
+    gambar:gDPDT},
+  dioda4:{nama:'Dioda Jembatan',pin:[[-P,0],[P,0],[0,-P],[0,P]],kotak:[-P,-P,P,P],
+    prop:{},field:[],gambar:gDioda4},
   /* Titik cabang: tidak punya sifat listrik apa pun, hanya menyatukan kawat.
      Inilah yang memungkinkan percabangan di tengah kawat. */
   simpul:{nama:'Titik cabang',pin:[[0,0]],kotak:[-8,-8,8,8],prop:{},field:[],gambar:gSimpul}
 };
 const KELOMPOK=[
-  {nama:'Sumber &amp; massa', isi:['sumber','sumberac','massa']},
-  {nama:'Pasif',              isi:['resistor','potensio','kapasitor','induktor','trafo']},
-  {nama:'Aktif',              isi:['dioda','led','zener']},
+  {nama:'Sumber &amp; massa', isi:['sumber','sumberac','vcc','massa']},
+  {nama:'Pasif',              isi:['resistor','potensio','kapasitor','elco','induktor','trafo',
+                                    'bohlam','ldr']},
+  {nama:'Aktif',              isi:['dioda','led','zener','fotodioda','dioda4']},
   {nama:'Transistor',         isi:['npn','pnp']},
   {nama:'Op-amp',             isi:['opamp']},
   {nama:'Alat ukur',          isi:['ampere','volt','probe']},
-  {nama:'Lainnya',            isi:['saklar','simpul']}
+  {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','simpul']}
 ];
 const URUT=KELOMPOK.reduce((a,g)=>a.concat(g.isi),[]);
 
@@ -1054,8 +1196,8 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.1';     /* naikkan bersama nomor VERSI di sw.js */
-const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
+const VERSI_APP='2.2';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_BERKAS=2.2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
 let lalu=0;                         /* penanda waktu bingkai sebelumnya */
@@ -1731,8 +1873,14 @@ function gSumberAC(k){
   garisJalur([[0,R_BULAT],[0,P]],C.copper,TEBAL);
   ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL);
   ctx.beginPath();ctx.arc(0,0,R_BULAT,0,6.2832);ctx.stroke();
+  /* Pratinjau kecil di dalam lingkaran mengikuti bentuk gelombang yang
+     dipilih, satu siklus penuh melintasi x = -9..9 — supaya siswa langsung
+     melihat bedanya sinus/segitiga/gigi gergaji/kotak tanpa membuka panel. */
   ctx.beginPath();
-  for(let x=-9;x<=9;x+=1) (x===-9?ctx.moveTo:ctx.lineTo).call(ctx,x,-6*Math.sin(x/9*Math.PI));
+  for(let x=-9;x<=9;x+=.5){
+    const y=bentukGelombang(k.prop.bentuk||0,(x+9)/18);
+    (x===-9?ctx.moveTo:ctx.lineTo).call(ctx,x,-6*y);
+  }
   ctx.lineWidth=tbl(TEBAL_HALUS); ctx.stroke();
   sbl(fmtVolt(k.prop.Vp)+'p',R_BULAT+9,-6,'left');
   sbl(fmtHz(k.prop.f),R_BULAT+9,7,'left');
@@ -1806,6 +1954,200 @@ function gInduktor(k){
   }
   labelAtas(k,fmtH(k.prop.L));
 }
+/* ===== komponen baru: cermin dilakukan otomatis oleh mesin gambar (k.cx),
+   jadi fungsi-fungsi ini hanya perlu menggambar orientasi bawaannya saja. */
+
+function gVCC(k){
+  garisJalur([[0,20],[0,6]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL); ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,6); ctx.lineTo(-7,-6); ctx.lineTo(7,-6); ctx.closePath(); ctx.stroke();
+  labelAtas(k,km(k.prop.V,1)+' V');
+}
+
+function gElco(k){
+  garisJalur([[-P,0],[-6,0]],C.copper,TEBAL); garisJalur([[6,0],[P,0]],C.copper,TEBAL);
+  /* pelat kiri (+) lurus; pelat kanan (−) melengkung — konvensi elco nyata */
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL_PLAT); ctx.lineCap='butt';
+  ctx.beginPath();ctx.moveTo(-6,-15);ctx.lineTo(-6,15);ctx.stroke();
+  ctx.beginPath();ctx.arc(-1,0,14,Math.PI*.32,-Math.PI*.32);ctx.stroke();
+  sbl('+',-16,-9,'center',3);
+  const v=keadaan.has(k.id)?keadaan.get(k.id):0;
+  const puncak=Math.max(vMaks.get(k.id)||0,Math.abs(v),1e-9);
+  const isi=Math.min(Math.abs(v)/puncak,1);
+  if(isi>0.02) antri(v>=0?'+':'−',-16,-9,C.charge,14,'center',3,true,0.3+0.7*isi);
+  labelAtas(k,fmtF(k.prop.C));
+  /* Elco nyata rusak bila kutubnya terbalik — peringatan ini yang membuat
+     komponen ini berbeda secara pedagogis dari kapasitor biasa. */
+  if(terbaca() && v<-1) tks('TERBALIK!',0,22,C.hot,10,'center',2);
+  else if(Math.abs(v)>1e-4) labelBawah(k,km(v,2)+' V',C.silk);
+}
+
+function gBohlam(k){
+  const i=terbaca()?Math.abs(hasil.arusKomp.get(k.id)||0):0;
+  const P_=i*i*Math.max(k.prop.R,1e-6);
+  const nyala=Math.min(Math.sqrt(P_/Math.max(k.prop.Pn,1e-3)),1.4);
+  if(nyala>0.02){
+    const r=14+14*nyala;
+    const g=ctx.createRadialGradient(0,0,2,0,0,r);
+    g.addColorStop(0,'#F2D48A'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.globalAlpha=Math.min(.18+.5*nyala,.7);
+    ctx.fillStyle=g; ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  garisJalur([[-P,0],[-13,0]],C.copper,TEBAL); garisJalur([[13,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=nyala>0.02?'#F2D48A':C.copper; ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath();ctx.arc(0,0,13,0,6.2832);ctx.stroke();
+  ctx.lineWidth=tbl(TEBAL_HALUS);
+  ctx.beginPath();ctx.moveTo(-6,6);ctx.lineTo(-2,-6);ctx.lineTo(2,6);ctx.lineTo(6,-6);ctx.stroke();
+  labelAtas(k,fmtOhm(k.prop.R));
+  if(nyala>0.02) labelBawah(k,km(P_,2)+' W',C.charge);
+}
+
+/* Dua garis panah kecil, dipakai bersama oleh LDR dan fotodioda untuk
+   menandai "peka cahaya" — konvensi simbol yang sama di kedua komponen. */
+function panahCahaya(){
+  ctx.strokeStyle=C.silk; ctx.lineWidth=tbl(TEBAL_HALUS); ctx.lineCap='round';
+  [-6,2].forEach(dx=>{
+    ctx.beginPath();ctx.moveTo(dx-11,-30);ctx.lineTo(dx+1,-18);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+1,-18);ctx.lineTo(dx-4.5,-19.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+1,-18);ctx.lineTo(dx-2,-23.5);ctx.stroke();
+  });
+}
+function tuasDuaArah(k,jenis){
+  if(ikonMode) return;
+  const r=px(11);
+  JENIS[jenis].tuas.forEach(u=>{
+    ctx.fillStyle=C['panel-dark'];
+    ctx.beginPath();ctx.arc(u.dx,u.dy,r,0,6.2832);ctx.fill();
+    ctx.strokeStyle=C.pilih;ctx.lineWidth=px(2);
+    ctx.beginPath();ctx.arc(u.dx,u.dy,r,0,6.2832);ctx.stroke();
+    ctx.lineWidth=px(2.2);
+    ctx.beginPath();
+    ctx.moveTo(u.dx-r*.45,u.dy); ctx.lineTo(u.dx+r*.45,u.dy);
+    if(u.aksi==='tambah'){ ctx.moveTo(u.dx,u.dy-r*.45); ctx.lineTo(u.dx,u.dy+r*.45) }
+    ctx.stroke();
+  });
+  tks(km((k.prop.pos||0)*100,0)+'%',0,-40,C.pilih,11,'center',2);
+}
+
+function gLDR(k){
+  panahCahaya();
+  garisJalur([[-P,0],[-16,0]],C.copper,TEBAL); garisJalur([[16,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath();ctx.arc(0,0,16,0,6.2832);ctx.stroke();
+  const pts=[[-11,0]], n=8;
+  for(let i=1;i<=n;i++) pts.push([-11+22*(i-.5)/n,(i%2?-6:6)]);
+  pts.push([11,0]); garisJalur(pts,C.copper,TEBAL_HALUS);
+  const p=Math.min(Math.max(k.prop.pos,0),1);
+  const R=Math.max(k.prop.Rgelap,1)*Math.pow(Math.max(k.prop.Rterang,1e-3)/Math.max(k.prop.Rgelap,1),p);
+  labelBawah(k,fmtOhm(R));
+  tuasDuaArah(k,'ldr');
+}
+
+function gFotodioda(k){
+  panahCahaya();
+  badanDioda();
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL_PLAT);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(11,-11);ctx.lineTo(11,11);ctx.stroke();
+  if(terbaca()){
+    const i=Math.abs(hasil.arusKomp.get(k.id)||0);
+    if(i>1e-8) labelBawah(k,fmtA(i),C.charge);
+  }
+  tuasDuaArah(k,'fotodioda');
+}
+
+function gPushButton(k,no){
+  garisJalur([[-P,0],[-14,0]],C.copper,TEBAL);
+  garisJalur([[14,0],[P,0]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper;ctx.lineWidth=tbl(TEBAL);
+  [[-14,0],[14,0]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke()});
+  /* jembatan kontak: mengikuti keadaan tutup SAAT INI, sehingga menekan
+     tuas langsung terlihat mengubah gambar, sama seperti saklar biasa */
+  if(k.prop.tutup) garisJalur([[-14,0],[14,0]],C.copper,TEBAL);
+  else{
+    ctx.strokeStyle=C.muted; ctx.lineWidth=tbl(TEBAL_HALUS); ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(14,0);ctx.stroke(); ctx.setLineDash([]);
+  }
+  /* tombol tekan: batang + kepala kotak, selalu di tengah (bukan kendali
+     dua-arah seperti saklar biasa, jadi tidak digambar biru bergerak) */
+  garisJalur([[0,-6],[0,-18]],C.copper,TEBAL_HALUS);
+  ctx.strokeStyle=k.prop.tutup?C.ok:C.pilih; ctx.lineWidth=tbl(TEBAL);
+  ctx.beginPath(); ctx.rect(-9,-26,18,8); ctx.stroke();
+  sbl(no?'NO':'NC',0,24,'center',3);
+}
+
+function gSPDT(k){
+  garisJalur([[-P,0],[-16,0]],C.copper,TEBAL);
+  garisJalur([[16,-20],[P,-20]],C.copper,TEBAL);
+  garisJalur([[16,20],[P,20]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+  [[-16,0],[16,-20],[16,20]].forEach(([x,y])=>{
+    ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke();
+  });
+  const ke=k.prop.tutup?[16,20]:[16,-20];
+  garisJalur([[-16,0],ke],C.copper,TEBAL);
+  if(!ikonMode){
+    const t=JENIS.spdt.tuas[0], r=px(11);
+    ctx.fillStyle=C['panel-dark'];
+    ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.fill();
+    ctx.strokeStyle=C.pilih;ctx.lineWidth=px(2);
+    ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.stroke();
+    ctx.lineWidth=px(2.2);
+    ctx.beginPath();ctx.moveTo(t.dx-r*.45,t.dy);ctx.lineTo(t.dx+r*.45,t.dy);ctx.stroke();
+  }
+  sbl('A',26,-20,'left',3); sbl('B',26,20,'left',3);
+}
+
+function gDPDT(k){
+  for(const dy of [-30,30]){
+    garisJalur([[-P,dy],[-16,dy]],C.copper,TEBAL);
+    garisJalur([[16,dy-16],[P,dy-16]],C.copper,TEBAL);
+    garisJalur([[16,dy+16],[P,dy+16]],C.copper,TEBAL);
+    ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+    [[-16,dy],[16,dy-16],[16,dy+16]].forEach(([x,y])=>{
+      ctx.beginPath();ctx.arc(x,y,3.2,0,6.2832);ctx.stroke();
+    });
+    const ke=k.prop.tutup?[16,dy+16]:[16,dy-16];
+    garisJalur([[-16,dy],ke],C.copper,TEBAL);
+  }
+  /* satu tuas, dua bagian — tuasnya digambar di tengah dan disambungkan ke
+     kedua bagian dengan garis putus, menunjukkan keduanya bergerak bersama */
+  ctx.strokeStyle='rgba(134,182,222,.4)'; ctx.lineWidth=px(1.2); ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(16,-30);ctx.lineTo(16,30);ctx.stroke(); ctx.setLineDash([]);
+  if(!ikonMode){
+    const t=JENIS.dpdt.tuas[0], r=px(11);
+    ctx.fillStyle=C['panel-dark'];
+    ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.fill();
+    ctx.strokeStyle=C.pilih;ctx.lineWidth=px(2);
+    ctx.beginPath();ctx.arc(t.dx,t.dy,r,0,6.2832);ctx.stroke();
+    ctx.lineWidth=px(2.2);
+    ctx.beginPath();ctx.moveTo(t.dx-r*.45,t.dy);ctx.lineTo(t.dx+r*.45,t.dy);ctx.stroke();
+  }
+}
+
+function gDioda4(k){
+  garisJalur([[-P,0],[-22,0]],C.copper,TEBAL);
+  garisJalur([[22,0],[P,0]],C.copper,TEBAL);
+  garisJalur([[0,-P],[0,-22]],C.copper,TEBAL);
+  garisJalur([[0,P],[0,22]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL);
+  ctx.strokeRect(-22,-22,44,44);
+  /* piktogram jembatan: diamond kecil dengan satu anak panah mengarah ke +,
+     cukup untuk mengingatkan arah rektifikasi tanpa menggambar 4 dioda utuh */
+  ctx.lineWidth=tbl(TEBAL_HALUS);
+  ctx.beginPath();
+  ctx.moveTo(-13,0);ctx.lineTo(0,-13);ctx.lineTo(13,0);ctx.lineTo(0,13);ctx.closePath();
+  ctx.stroke();
+  ctx.fillStyle=C.copper;
+  ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(-4,-5);ctx.lineTo(4,-5);ctx.closePath();ctx.fill();
+  sbl('~',-30,0,'center',3); sbl('~',30,0,'center',3);
+  sbl('+',0,-28,'center',3); sbl('−',0,28,'center',3);
+  if(terbaca()){
+    const vout=hasil.V[hasil.net.petaSimpul.get(k.id+':2')]-hasil.V[hasil.net.petaSimpul.get(k.id+':3')];
+    tks(km(vout,2)+' V',0,38,C.silk,11,'center',2);
+  }
+}
+
 function gMassa(){
   garisJalur([[0,-20],[0,0]],C.copper,TEBAL);
   ctx.strokeStyle=C.copper; ctx.lineCap='round';
@@ -1918,7 +2260,14 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2) continue;
       let p,q,I;
-      if(k.jenis==='npn'||k.jenis==='pnp'){
+      if(k.jenis==='dioda4'){ continue }       /* empat cabang, tak ada satu "jalur utama" */
+      if(k.jenis==='spdt'){
+        const aA=k.prop.tutup?'#b':'#a';
+        I=hasil.arusKomp.get(k.id+aA)||0; p=posPin(k,0); q=posPin(k,k.prop.tutup?2:1);
+      }else if(k.jenis==='dpdt'){
+        const aA=k.prop.tutup?'#b1':'#a1';
+        I=hasil.arusKomp.get(k.id+aA)||0; p=posPin(k,0); q=posPin(k,k.prop.tutup?2:1);
+      }else if(k.jenis==='npn'||k.jenis==='pnp'){
         /* jalur utama transistor adalah kolektor -> emitor */
         I=hasil.arusKomp.get(k.id)||0; p=posPin(k,1); q=posPin(k,2);
       }else if(k.jenis==='trafo'){
@@ -1978,7 +2327,8 @@ function gambar(){
     });
     for(const k of M.komponen){
       if(k.pin.length<2||k.jenis==='volt'||k.jenis==='ampere'||k.jenis==='opamp'
-         ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio') continue;
+         ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio'
+         ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt') continue;
       const [x,y]=putar(k,0,JENIS[k.jenis].kotak[3]);
       tks(fmtA(hasil.arusKomp.get(k.id)||0), x, y+px(13), C.silk,10);
     }
@@ -2863,6 +3213,17 @@ cv.addEventListener('pointerdown',e=>{
     const k=komponenOleh(tekanUji.kunci.split(':')[0]);
     aksi={t:'geserKomp',k,dx:wx-k.x,dy:wy-k.y};
   }
+  else if(tekanUji.t==='tuas' && (tekanUji.aksi==='tekanNO'||tekanUji.aksi==='tekanNC')){
+    /* Push button: berbeda dari saklar biasa, keadaannya harus berubah
+       SEGERA saat ditekan (bukan menunggu lepas-tanpa-gerak seperti
+       ketukan), dan HARUS pulih walau jari bergeser atau lepas di luar
+       kanvas. Karena itu ditangani lewat aksi tersendiri, bukan lewat
+       jalur 'toggle' yang sudah ada. */
+    const kk=tekanUji.k;
+    kk.prop.tutup = tekanUji.aksi==='tekanNO' ? 1 : 0;
+    aksi={t:'tekanTuas',k:kk,lepasKe:tekanUji.aksi==='tekanNO'?0:1};
+    segarkan();
+  }
   else if(tekanUji.t==='tuas')
     aksi={t:'geserKomp',k:tekanUji.k,dx:wx-tekanUji.k.x,dy:wy-tekanUji.k.y};
   else if(tekanUji.t==='kawat')
@@ -2896,6 +3257,11 @@ cv.addEventListener('pointermove',e=>{
     zoom=z; return;
   }
   if(!sudahGerak||!aksi) return;
+  /* Push button tidak boleh ikut menggeser papan — tanpa penjagaan ini,
+     jitter jari sekecil apa pun saat menahan tombol akan jatuh ke cabang
+     pan bawaan di akhir fungsi ini dan melempar galat, karena aksi
+     'tekanTuas' tidak punya field .pan/.x/.y yang cabang itu harapkan. */
+  if(aksi.t==='tekanTuas') return;
   const [wx,wy]=keDunia(sx,sy);
 
   if(aksi.t==='geserKomp'){
@@ -2918,6 +3284,13 @@ cv.addEventListener('pointermove',e=>{
 
 let ketukLalu={t:0,x:0,y:0,id:''};
 function lepas(e){
+  /* Push button: keadaannya harus pulih SETIAP KALI jari terangkat, terlepas
+     dari apakah itu ketukan, geseran, atau pointercancel — beda dari semua
+     interaksi lain di sini yang hanya bereaksi pada ketukan tanpa gerak. */
+  if(aksi&&aksi.t==='tekanTuas'){
+    aksi.k.prop.tutup=aksi.lepasKe;
+    segarkan();
+  }
   const ada=jari.delete(e.pointerId);
   if(jari.size<2) pinch=null;
   if(ada&&!sudahGerak&&tekanUji&&awal){
