@@ -1053,7 +1053,7 @@ let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SASMITA';
-const VERSI_APP='1.8';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='1.9';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=1;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -3274,15 +3274,32 @@ function selesaiContoh(skala,jendela){
 }
 document.getElementById('mContohPot').addEventListener('click',tutupMenu(()=>{
   mulaiContoh();
-  const s =tambahKomponen('sumber',120,300); s.prop.E=12;
-  const p =tambahKomponen('potensio',380,200); p.prop.R=10000; p.prop.pos=.5;
-  const rl=tambahKomponen('resistor',560,300); rl.prop.R=10000; rl.rot=1;
-  const pr=tambahKomponen('probe',380,120);
-  const am=tambahKomponen('ampere',560,120);
-  const g =tambahKomponen('massa',120,420);
-  [[s.id+':0',p.id+':0'],[p.id+':2',s.id+':1'],[p.id+':1',pr.id+':0'],
-   [p.id+':1',am.id+':0'],[am.id+':1',rl.id+':0'],[rl.id+':1',s.id+':1'],
-   [s.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  
+  // Inisialisasi komponen dengan koordinat baru
+  const s  = tambahKomponen('sumber', 120, 300); s.prop.E=12;
+  const p  = tambahKomponen('potensio', 220, 180); p.prop.R=10000; p.prop.pos=.5;
+  const rl = tambahKomponen('resistor', 560, 300); rl.prop.R=10000; rl.rot=1;
+  const pr = tambahKomponen('probe', 360, 180);
+  const am = tambahKomponen('ampere', 480, 180);
+  const g  = tambahKomponen('massa', 120, 420);
+  
+  // Penambahan komponen simpul
+  const n1 = tambahKomponen('simpul', 120, 180); // k7
+  const n2 = tambahKomponen('simpul', 360, 180); // k8
+  
+  // Sambungan Kawat (Wiring) menggunakan simpul
+  [
+    [s.id+':1', g.id+':0'],   // k1:1 - k6:0
+    [s.id+':0', n1.id+':0'],  // k1:0 - k7:0
+    [n1.id+':0', p.id+':0'],  // k7:0 - k2:0
+    [p.id+':1', n1.id+':0'],  // k2:1 - k7:0
+    [am.id+':1', rl.id+':0'], // k5:1 - k3:0
+    [rl.id+':1', g.id+':0'],  // k3:1 - k6:0
+    [p.id+':2', n2.id+':0'],  // k2:2 - k8:0
+    [n2.id+':0', am.id+':0'], // k8:0 - k5:0
+    [pr.id+':0', n2.id+':0']  // k4:0 - k8:0
+  ].forEach(([a,b])=>sambung(a,b));
+  
   selesaiContoh(0);
 }));
 document.getElementById('mContohTrafo').addEventListener('click',tutupMenu(()=>{
