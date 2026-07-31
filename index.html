@@ -424,7 +424,7 @@ const keadaan=new Map();
    inilah satu-satunya komponen yang keadaannya DISKRIT. */
 const keadaanRelay=new Map();
 let tSim=0;
-function resetKeadaan(){ keadaan.clear(); keadaanRelay.clear(); tSim=0 }
+function resetKeadaan(){ keadaan.clear(); keadaanRelay.clear(); keadaanReg.clear(); tSim=0 }
 const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
 
 const FARAD = k=>Math.max(k.prop.C,1e-4)*1e-6;   /* prop.C dalam µF */
@@ -520,6 +520,42 @@ function keluaranOA(vd,vsat){
   return {V:vsat*th, dV:OA_A*(1-th*th)};
 }
 const tegOA=new Map();
+
+/* ===== IC regulator 78xx ===================================================
+   Dua perilaku yang harus benar secara pedagogis:
+   1. DROPOUT — keluaran hanya bertahan di Vreg selama masukan masih paling
+      sedikit Vdrop di atasnya. Di bawah itu keluaran ikut turun mengikuti
+      masukan. Inilah sebabnya 7805 butuh masukan minimal ~7 V.
+   2. BATAS ARUS — beban berlebih membuat keluaran runtuh, bukan menyuplai
+      arus tak terhingga.
+   Keduanya dibuat MULUS (akar dan tanh), bukan dipatok keras, karena
+   Newton-Raphson butuh turunan di mana-mana — pelajaran yang sama seperti
+   penjenuhan op-amp.
+   Kaki: 0 = masukan, 1 = massa, 2 = keluaran.
+   ========================================================================= */
+/* Lutut dibuat sesempit mungkin tetapi tetap mulus. Terlalu lebar membuat
+   keluaran melorot beberapa puluh milivolt saat masukan sedikit di atas
+   ambang dropout — padahal 7805 nyata masih tepat 5,00 V di sana. */
+const REG_LUTUT=0.12;          /* lebar lutut dropout, volt */
+const REG_LUTUT0=0.05;         /* lebar lutut saat keluaran mendekati nol */
+function keluaranReg(vin,iload,p){
+  /* batas atas dari dropout: vmaks = vin - Vdrop, dipadu Vreg secara mulus */
+  const vmaks=vin-p.Vdrop;
+  const d=p.Vreg-vmaks, rt=Math.sqrt(d*d+REG_LUTUT*REG_LUTUT);
+  const vt=0.5*(p.Vreg+vmaks-rt);
+  const dvt=0.5*(1+d/rt);                    /* d(vt)/d(vin) */
+  /* keluaran tidak boleh negatif walau masukan di bawah Vdrop */
+  const rt0=Math.sqrt(vt*vt+REG_LUTUT0*REG_LUTUT0);
+  const vp=0.5*(vt+rt0);
+  const dvp=0.5*(1+vt/rt0)*dvt;              /* d(vp)/d(vin) */
+  /* pembatas arus: runtuh mulus begitu melewati Imaks */
+  const Im=Math.max(p.Imaks,1e-4);
+  const th=Math.tanh((iload-Im)/(0.06*Im));
+  const lim=0.5*(1-th);
+  const dlim=-0.5*(1-th*th)/(0.06*Im);       /* d(lim)/d(iload) */
+  return {V:vp*lim, dVdVin:dvp*lim, dVdI:vp*dlim};
+}
+const keadaanReg=new Map();   /* id -> {vin, il} awal iterasi berikutnya */
 const tegTrans=new Map();     /* {vbe,vbc} awal iterasi berikutnya */
 const tegDioda=new Map();              /* tegangan dioda, awal iterasi berikutnya */
 
@@ -550,7 +586,7 @@ function nilaiSumber(x,t){
    tengah bingkai — lalu tiap substep hanya mengisi angka. */
 function susunRencana(M,net){
   const sim=k=>net.petaSimpul.get(k);
-  const res=[],src=[],dyn=[],nl=[],tr=[],tf=[],oa=[],rl=[];
+  const res=[],src=[],dyn=[],nl=[],tr=[],tf=[],oa=[],rl=[],rg=[];
   /* Beberapa komponen butuh simpul dalam yang tidak punya kaki — mis. titik
      antara resistansi belitan dan belitan ideal pada trafo. */
   let jumlahSimpul=net.jumlah;
@@ -649,6 +685,18 @@ function susunRencana(M,net){
         rl.push({id:k.id,idL:k.id+'#lk',Itarik:It,Ilepas:Il});
         break;
       }
+      case 'reg78':{
+        /* Kaki: 0=masukan, 1=massa, 2=keluaran. Keadaan awal iterasi diambil
+           dari langkah sebelumnya, seperti dioda dan op-amp. */
+        const st=keadaanReg.get(k.id)||{vin:k.prop.Vreg+k.prop.Vdrop,il:0};
+        rg.push({id:k.id,in:a,gnd:b,out:sim(k.id+':2'),
+          p:{Vreg:Math.max(k.prop.Vreg,0.1),
+             Vdrop:Math.max(k.prop.Vdrop,0.05),
+             Imaks:Math.max(k.prop.Imaks,0.001)},
+          Iq:Math.max(k.prop.Iq,0)*1e-3,
+          vin:st.vin, il:st.il});
+        break;
+      }
       case 'relay2':{
         /* Sama persis dengan relay SPDT, hanya kontaknya dua pasang yang
            digerakkan oleh SATU kumparan — jadi keadaannya pun satu. */
@@ -716,7 +764,8 @@ function susunRencana(M,net){
   src.forEach(x=>x.r=baris++);
   tf.forEach(x=>x.r=baris++);      /* satu peubah arus primer per trafo */
   oa.forEach(x=>x.r=baris++);      /* satu peubah arus keluaran per op-amp */
-  return {n,N:baris,res,src,dyn,nl,tr,tf,oa,rl,jumlah:jumlahSimpul};
+  rg.forEach(x=>x.r=baris++);      /* satu peubah arus keluaran per regulator */
+  return {n,N:baris,res,src,dyn,nl,tr,tf,oa,rl,rg,jumlah:jumlahSimpul};
 }
 
 let bufV=null;
@@ -728,7 +777,7 @@ const MAKS_ITER=100, VNTOL=1e-6, RELTOL=1e-3;
 function langkahRencana(R,h,penuh,tUjung){
   const N=R.N;
   if(N===0) return {V:[0],arusKomp:new Map(),iter:0,konvergen:true};
-  const takLinear=R.nl.length>0||R.tr.length>0||R.oa.length>0;
+  const takLinear=R.nl.length>0||R.tr.length>0||R.oa.length>0||R.rg.length>0;
   const maksIter=takLinear?MAKS_ITER:1;
   if(!bufV||bufV.length!==R.jumlah) bufV=new Array(R.jumlah).fill(0);
   const V=bufV;
@@ -809,6 +858,29 @@ function langkahRencana(R,h,penuh,tUjung){
       if(o.m>0) A[r*N+(o.m-1)]+=ke.dV;
       z[r]=ke.V-ke.dV*o.vd;
     }
+    for(const g0 of R.rg){
+      /* x[r] = arus yang MENINGGALKAN simpul keluaran menuju regulator,
+         jadi arus yang dipasok ke beban adalah -x[r]. */
+      const ke=keluaranReg(g0.vin,g0.il,g0.p);
+      g0.vo=ke.V;
+      const r=g0.r;
+      if(g0.out>0){ A[(g0.out-1)*N+r]+=1; A[r*N+(g0.out-1)]+=1 }
+      /* arus beban ditarik dari kaki masukan: koefisien -1 pada KCL masukan */
+      if(g0.in>0)  A[(g0.in-1)*N+r]-=1;
+      /* baris kendala: V(out) - V(gnd) = f(vin, iload) */
+      if(g0.gnd>0){ A[(g0.gnd-1)*N+r]+=0; A[r*N+(g0.gnd-1)]-=1 }
+      if(g0.in>0)  A[r*N+(g0.in-1)]-=ke.dVdVin;
+      if(g0.gnd>0) A[r*N+(g0.gnd-1)]+=ke.dVdVin;
+      /* iload = -x[r], jadi d/dx[r] = -dVdI */
+      A[r*N+r]+=ke.dVdI;
+      /* Ruas kanan = g0 - A*vin0 - B*il0. Tanda suku terakhir sempat
+         tertulis positif; akibatnya linearisasi arus jadi berlawanan arah,
+         iterasi berayun, dan pada beban berat keluarannya sempat menjadi
+         NEGATIF — mustahil untuk regulator. */
+      z[r]=ke.V-ke.dVdVin*g0.vin-ke.dVdI*g0.il;
+      /* arus diam mengalir dari masukan ke massa, tetap dan tak bergantung beban */
+      Isrc(g0.in,g0.gnd,g0.Iq);
+    }
     for(const q of R.src){
       if(q.a>0){ A[(q.a-1)*N+q.r]+=1; A[q.r*N+(q.a-1)]+=1 }
       if(q.b>0){ A[(q.b-1)*N+q.r]-=1; A[q.r*N+(q.b-1)]-=1 }
@@ -840,6 +912,19 @@ function langkahRencana(R,h,penuh,tUjung){
       if(Math.abs(vd-o.vd)>1e-9+RELTOL*Math.abs(vd)) cukup=false;
       o.vd=vd;
     }
+    for(const g0 of R.rg){
+      let vin=V[g0.in]-V[g0.gnd];
+      let il=-x[g0.r];
+      /* Pembatas langkah: tanpa ini, lonjakan arus beban di daerah pembatas
+         arus bisa membuat iterasi berayun — masalah yang sama seperti
+         penjenuhan op-amp dulu. */
+      const bv=Math.max(g0.p.Vreg,1), bi=Math.max(g0.p.Imaks,1e-3)*0.5;
+      if(Math.abs(vin-g0.vin)>bv) vin=g0.vin+Math.sign(vin-g0.vin)*bv;
+      if(Math.abs(il-g0.il)>bi)   il =g0.il +Math.sign(il-g0.il)*bi;
+      if(Math.abs(vin-g0.vin)>VNTOL+RELTOL*Math.abs(vin)) cukup=false;
+      if(Math.abs(il-g0.il)>1e-9+RELTOL*Math.abs(il))     cukup=false;
+      g0.vin=vin; g0.il=il;
+    }
     for(const t of R.tr){
       const sg=t.p.sg;
       let vbe=sg*(V[t.b]-V[t.e]), vbc=sg*(V[t.b]-V[t.c]);
@@ -866,6 +951,10 @@ function langkahRencana(R,h,penuh,tUjung){
       arusKomp.set(w.id+'#s',-x[w.r]/w.n);
     }
     for(const o of R.oa) arusKomp.set(o.id,x[o.r]);
+    for(const g0 of R.rg){
+      arusKomp.set(g0.id,-x[g0.r]);              /* arus ke beban */
+      arusKomp.set(g0.id+'#in',-x[g0.r]+g0.Iq);  /* arus masukan */
+    }
     for(const t of R.tr){
       const sg=t.p.sg, a=arusTransistor(t.p,sg*(V[t.b]-V[t.e]),sg*(V[t.b]-V[t.c]));
       arusKomp.set(t.id,sg*a.Ic);              /* yang dilaporkan: arus kolektor */
@@ -887,6 +976,7 @@ function langkahRencana(R,h,penuh,tUjung){
    gagal konvergen karena itu tidak sempat mengotori muatan kapasitor. */
 function komit(R){
   for(const o of R.oa) tegOA.set(o.id,o.vd);
+  for(const g0 of R.rg) keadaanReg.set(g0.id,{vin:g0.vin,il:g0.il});
   for(const t of R.tr) tegTrans.set(t.id,{vbe:t.vbe,vbc:t.vbc});
   for(const d of R.nl) tegDioda.set(d.id,d.v);
   for(const d of R.dyn) keadaan.set(d.id,d.akhir);
@@ -1000,6 +1090,13 @@ function arusPerKawat(M,net,arusKomp){
     if(k.jenis==='vcc'){
       /* satu kaki eksplisit; kaki lainnya adalah GND implisit (node 0) */
       tambah(k.id+':0', -(arusKomp.get(k.id)||0));
+      continue;
+    }
+    if(k.jenis==='reg78'){
+      const io=arusKomp.get(k.id)||0, ii=arusKomp.get(k.id+'#in')||0;
+      tambah(k.id+':0',-ii);        /* masukan menarik arus */
+      tambah(k.id+':1',ii-io);      /* massa mengembalikan selisihnya */
+      tambah(k.id+':2',io);         /* keluaran memasok beban */
       continue;
     }
     if(k.jenis==='relay2'){
@@ -1255,6 +1352,17 @@ const JENIS={
            {k:'Itarik',nm:'Arus tarik',sat:'mA',jenis:'angka',min:.1,max:500,step:.1,log:true},
            {k:'Ilepas',nm:'Arus lepas',sat:'mA',jenis:'angka',min:.05,max:500,step:.05,log:true}],
     gambar:gRelay},
+  reg78:{nama:'IC Regulator 78xx',pin:[[-P,0],[0,P],[P,0]],kotak:[-P,-20,P,P],
+    prop:{Vreg:5,Vdrop:2,Imaks:1,Iq:5},
+    field:[{k:'Vreg',nm:'Pilih tipe',jenis:'daftar',opsi:[
+              {v:5,t:'7805  —  5 V'},{v:6,t:'7806  —  6 V'},{v:8,t:'7808  —  8 V'},
+              {v:9,t:'7809  —  9 V'},{v:12,t:'7812  —  12 V'},{v:15,t:'7815  —  15 V'},
+              {v:24,t:'7824  —  24 V'}]},
+           {k:'Vreg',nm:'Tegangan keluaran',sat:'V',jenis:'angka',min:1,max:30,step:.1},
+           {k:'Vdrop',nm:'Tegangan jatuh minimum',sat:'V',jenis:'angka',min:.1,max:5,step:.1},
+           {k:'Imaks',nm:'Batas arus',sat:'A',jenis:'angka',min:.01,max:5,step:.01},
+           {k:'Iq',nm:'Arus diam',sat:'mA',jenis:'angka',min:0,max:50,step:.1}],
+    gambar:gReg78},
   relay2:{nama:'Relay DPDT',
     pin:[[-56,-P],[-56,P],[-20,P],[-28,-P],[0,-P],[30,P],[22,-P],[50,-P]],
     kotak:[-70,-P,70,P],
@@ -1278,7 +1386,7 @@ const KELOMPOK=[
                                     'bohlam','ldr']},
   {nama:'Aktif',              isi:['dioda','led','zener','fotodioda','dioda4']},
   {nama:'Transistor',         isi:['npn','pnp']},
-  {nama:'Op-amp',             isi:['opamp']},
+  {nama:'Op-amp &amp; IC',      isi:['opamp','reg78']},
   {nama:'Alat ukur',          isi:['ampere','volt','probe']},
   {nama:'Lainnya',            isi:['saklar','pbno','pbnc','spdt','dpdt','relay','relay2','simpul']}
 ];
@@ -1295,7 +1403,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.3';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='2.4';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -2299,6 +2407,34 @@ function badanRelay(k,x0,x1,xk,pasangan){
     tks(aktif?'AKTIF':'lepas',xk,30,aktif?C.ok:C.muted,10,'center',2);
   }
 }
+/* Regulator 78xx: kotak dengan tiga kaki dan tipe tertulis di badannya —
+   lambang yang dipakai di hampir semua buku praktikum. */
+function gReg78(k){
+  garisJalur([[-P,0],[-26,0]],C.copper,TEBAL);
+  garisJalur([[26,0],[P,0]],C.copper,TEBAL);
+  garisJalur([[0,14],[0,P]],C.copper,TEBAL);
+  ctx.strokeStyle=C.copper; ctx.lineWidth=tbl(TEBAL); ctx.lineJoin='miter';
+  ctx.beginPath(); ctx.rect(-26,-14,52,28); ctx.stroke();
+  const tipe='78'+(k.prop.Vreg<10?'0':'')+km(k.prop.Vreg,0);
+  sbl(tipe,0,0,'center',3);
+  sbl('IN',-30,-9,'right',3); sbl('OUT',30,-9,'left',3); sbl('GND',9,22,'left',3);
+  if(terbaca()){
+    const vout=hasil.V[hasil.net.petaSimpul.get(k.id+':2')]
+              -hasil.V[hasil.net.petaSimpul.get(k.id+':1')];
+    const vin =hasil.V[hasil.net.petaSimpul.get(k.id+':0')]
+              -hasil.V[hasil.net.petaSimpul.get(k.id+':1')];
+    const io=Math.abs(hasil.arusKomp.get(k.id)||0);
+    tks(km(vout,2)+' V',0,-24,C.silk,11,'center',2);
+    /* Peringatan dropout: inilah kesalahan paling sering di praktikum —
+       memberi 7805 masukan 6 V lalu heran keluarannya bukan 5 V. */
+    if(vin < k.prop.Vreg+k.prop.Vdrop-0.15)
+      tks('MASUKAN KURANG',0,36,C.hot,10,'center',2);
+    else if(io > k.prop.Imaks*0.92)
+      tks('BATAS ARUS',0,36,C.hot,10,'center',2);
+    else if(io>1e-5)
+      tks(fmtA(io),0,36,C.charge,10,'center',2);
+  }
+}
 function gRelay(k){
   badanRelay(k,-38,38,-26,[[2,30,10]]);
   sbl('NC',2,-30,'center',3); sbl('NO',30,-30,'center',3);
@@ -2443,7 +2579,7 @@ function gambar(){
     for(const k of M.komponen){
       if(k.pin.length<2) continue;
       let p,q,I;
-      if(k.jenis==='dioda4'||k.jenis==='relay'||k.jenis==='relay2'){ continue }  /* banyak cabang */
+      if(k.jenis==='dioda4'||k.jenis==='relay'||k.jenis==='relay2'||k.jenis==='reg78'){ continue }
       if(k.jenis==='spdt'){
         const aA=k.prop.tutup?'#b':'#a';
         I=hasil.arusKomp.get(k.id+aA)||0; p=posPin(k,0); q=posPin(k,k.prop.tutup?2:1);
@@ -2512,7 +2648,7 @@ function gambar(){
       if(k.pin.length<2||k.jenis==='volt'||k.jenis==='ampere'||k.jenis==='opamp'
          ||k.jenis==='npn'||k.jenis==='pnp'||k.jenis==='trafo'||k.jenis==='potensio'
          ||k.jenis==='dioda4'||k.jenis==='spdt'||k.jenis==='dpdt'
-         ||k.jenis==='relay'||k.jenis==='relay2') continue;
+         ||k.jenis==='relay'||k.jenis==='relay2'||k.jenis==='reg78') continue;
       const [x,y]=putar(k,0,JENIS[k.jenis].kotak[3]);
       tks(fmtA(hasil.arusKomp.get(k.id)||0), x, y+px(13), C.silk,10);
     }
