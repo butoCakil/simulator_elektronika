@@ -1053,6 +1053,7 @@ let dipilih=null, pilihKawat=-1, pinTertunda=null, sorot=null;
 let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
+const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
 const VERSI_APP='2.1';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
@@ -3444,7 +3445,8 @@ fBuka.addEventListener('change',()=>{
     try{
       const mentah=JSON.parse(fr.result);
       if(!mentah.k) throw 0;
-      if(mentah.aplikasi && mentah.aplikasi!==APLIKASI)
+      if(mentah.aplikasi && mentah.aplikasi!==APLIKASI &&
+         APLIKASI_LAMA.indexOf(mentah.aplikasi)<0)
         throw new Error('Berkas ini bukan rangkaian '+APLIKASI);
       const d=migrasi(mentah);
       if(!d) throw new Error('Berkas dibuat oleh versi SIMBION yang lebih baru — '+
