@@ -3217,20 +3217,41 @@ document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
 document.getElementById('mContohCE').addEventListener('click',tutupMenu(()=>{
   rekam();
   M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
-  const vcc=tambahKomponen('sumber',820,220); vcc.prop.E=12;
-  const rb =tambahKomponen('resistor',480,80); rb.prop.R=470000;
-  const rc =tambahKomponen('resistor',700,140); rc.prop.R=2200; rc.rot=1;
-  const q  =tambahKomponen('npn',600,300);
-  const cin=tambahKomponen('kapasitor',380,220); cin.prop.C=10;
-  const ac =tambahKomponen('sumberac',200,260); ac.prop.Vp=0.01; ac.prop.f=1000;
-  const pIn=tambahKomponen('probe',480,220);
-  const pOut=tambahKomponen('probe',700,240);
-  const g  =tambahKomponen('massa',400,460);
-  [[ac.id+':0',cin.id+':0'],[cin.id+':1',q.id+':0'],[cin.id+':1',pIn.id+':0'],
-   [rb.id+':1',q.id+':0'],[rb.id+':0',vcc.id+':0'],
-   [vcc.id+':0',rc.id+':0'],[rc.id+':1',q.id+':1'],[rc.id+':1',pOut.id+':0'],
-   [q.id+':2',g.id+':0'],[ac.id+':1',g.id+':0'],[vcc.id+':1',g.id+':0']]
-    .forEach(([a,b])=>sambung(a,b));
+  
+  // Inisialisasi Komponen dengan koordinat dan rotasi baru
+  const vcc = tambahKomponen('sumber', 580, 220); vcc.prop.E=12;
+  const rb  = tambahKomponen('resistor', 360, 140); rb.prop.R=470000; rb.rot=1;
+  const rc  = tambahKomponen('resistor', 460, 140); rc.prop.R=2200; rc.rot=1;
+  const q   = tambahKomponen('npn', 440, 260);
+  const cin = tambahKomponen('kapasitor', 280, 260); cin.prop.C=10;
+  const ac  = tambahKomponen('sumberac', 200, 320); ac.prop.Vp=0.01; ac.prop.f=1000;
+  const pIn = tambahKomponen('probe', 360, 260);
+  const pOut= tambahKomponen('probe', 460, 200);
+  const g   = tambahKomponen('massa', 460, 400);
+  
+  // Penambahan komponen simpul
+  const n1 = tambahKomponen('simpul', 360, 260); // k10
+  const n2 = tambahKomponen('simpul', 460, 80);  // k11
+  const n3 = tambahKomponen('simpul', 460, 200); // k12
+  
+  // Sambungan Kawat (Wiring) menggunakan simpul
+  [
+    [ac.id+':0', cin.id+':0'],   // k6:0 - k5:0
+    [cin.id+':1', n1.id+':0'],   // k5:1 - k10:0
+    [n1.id+':0', q.id+':0'],     // k10:0 - k4:0
+    [pIn.id+':0', n1.id+':0'],   // k7:0 - k10:0
+    [rb.id+':1', n1.id+':0'],    // k2:1 - k10:0
+    [rb.id+':0', n2.id+':0'],    // k2:0 - k11:0
+    [n2.id+':0', vcc.id+':0'],   // k11:0 - k1:0
+    [rc.id+':0', n2.id+':0'],    // k3:0 - k11:0
+    [rc.id+':1', n3.id+':0'],    // k3:1 - k12:0
+    [n3.id+':0', q.id+':1'],     // k12:0 - k4:1
+    [pOut.id+':0', n3.id+':0'],  // k8:0 - k12:0
+    [q.id+':2', g.id+':0'],      // k4:2 - k9:0
+    [g.id+':0', ac.id+':1'],     // k9:0 - k6:1
+    [vcc.id+':1', g.id+':0']     // k1:1 - k9:0
+  ].forEach(([a,b])=>sambung(a,b));
+  
   hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
   iSkala=3; labelSkala(); iJendela=5; labelJendela(); bukaScope(true);
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
