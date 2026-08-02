@@ -64,6 +64,14 @@
   .chip button{height:32px;padding:0 11px;font-size:10.5px;border-color:var(--pilih);color:var(--pilih)}
   .peringatan{position:absolute;left:12px;right:12px;bottom:10px;text-align:center;
     font-size:12.5px;color:var(--hot);pointer-events:none}
+  /* Bilah cepat: muncul di kanan atas kanvas saat sebuah komponen dipilih,
+     dan menghilang begitu panel detail dibuka agar tidak menumpuk fungsi. */
+  .cepat{position:absolute;top:10px;right:10px;z-index:9;display:none;gap:6px}
+  .cepat.tampil{display:flex}
+  .cepat button{width:42px;height:42px;padding:0;border-radius:3px;
+    background:rgba(14,37,41,.94)}
+  .cepat button .ik{width:1.5em;height:1.5em}
+  body.proyektor .cepat button{width:54px;height:54px}
   .pita{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:11;
     background:rgba(14,37,41,.96);border:1px solid var(--ok);border-radius:20px;
     padding:8px 8px 8px 15px;display:none;align-items:center;gap:8px;
@@ -285,23 +293,26 @@
       <button id="mContoh">seri–paralel DC</button>
       <button id="mContohPot">pembagi tegangan potensiometer</button>
       <button id="mContohLED">LED &amp; pembatas arus</button>
-      <button id="mContohSW">transistor sebagai saklar</button>
-      <button id="mContohBz">alarm cahaya: LDR + buzzer</button>
       <button id="mContohPS">penyearah jembatan + filter</button>
       <button id="mContohTrafo">catu daya trafo → jembatan → filter</button>
+      <button id="mContohSW">transistor sebagai saklar</button>
       <button id="mContohCE">penguat emitor bersama</button>
       <button id="mContohOA">op-amp penguat membalik</button>
       <button id="mContohCT">catu daya simetris ±5 V (trafo CT)</button>
+      <button id="mContohBz">alarm cahaya: LDR + buzzer</button>
       <button id="mContohSpk">nada ke speaker</button>
-      <button id="mContohGel">bentuk gelombang ke speaker</button>
       <button id="mContohRy">relay: saklar kecil, beban besar</button>
+      <button id="mContohGel">bentuk gelombang ke speaker</button>
     </div>
     <button id="mBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v3h16v-3"/></svg>Buka berkas…</button>
-    <button id="mSimpan"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg>Simpan berkas</button>
+    <button id="mRecentBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg><span>Berkas terakhir</span><span style="margin-left:auto">▾</span></button>
+    <div class="submenu" id="subRecent"></div>
+    <button id="mSimpan"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg><span>Simpan</span><span id="mSimpanNama" style="margin-left:auto;color:var(--muted);font-size:10px"></span></button>
+    <button id="mSimpanSbg"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/><path d="M19 3v5M21.5 5.5h-5"/></svg>Simpan sebagai…</button>
     <hr>
     <button id="mBersih" style="color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>Kosongkan papan</button>
   </div>
-  <input type="file" id="fBuka" accept=".json,application/json" hidden>
+  <input type="file" id="fBuka" accept=".sbn,.json,application/json" hidden>
 </div>
 
 <div class="skop" id="skopbar">
@@ -314,6 +325,12 @@
   <div class="chip" id="chip">
     <span id="chipTeks"></span>
     <button id="chipBatal">Batal</button>
+  </div>
+  <div class="cepat" id="cepat">
+    <button data-c="putar" title="Putar 90°"><svg class="ik" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-8-8"/><path d="M12 1.5V6.5L16 4"/></svg></button>
+    <button data-c="cerminH" title="Cermin mendatar"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 8L3 12l5 4z"/><path d="M16 8l5 4-5 4z"/></svg></button>
+    <button data-c="cerminV" title="Cermin tegak"><svg class="ik" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M8 8l4-5 4 5z"/><path d="M8 16l4 5 4-5z"/></svg></button>
+    <button data-c="hapus" title="Hapus" style="color:var(--hot);border-color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
   </div>
   <div class="peringatan" id="peringatan"></div>
   <div class="pita" id="pitaBaru">
@@ -1502,7 +1519,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.8';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='2.9';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -2911,6 +2928,7 @@ const elKet=document.getElementById('ket'), elTanda=document.getElementById('tan
 const elIns=document.getElementById('sIns');
 const bukaSheet=b=>{
   sheet.classList.toggle('buka',b);
+  if(typeof segarkanCepat==='function') segarkanCepat();
   elTanda.textContent=b?'▼':'▲';
   /* Layar skop dan panel detail bersaing memakan tinggi layar; di HP
      keduanya terbuka sekaligus tidak menyisakan ruang untuk skema. */
@@ -2919,8 +2937,37 @@ const bukaSheet=b=>{
 pegangEl.addEventListener('click',()=>bukaSheet(!sheet.classList.contains('buka')));
 /* Memilih TIDAK membuka panel. Panel hanya terbuka oleh ketukan ganda
    atau oleh tombol panah di batang pegangan. */
-function pilihKomp(k){dipilih=k;pilihKawat=-1;gambarIns()}
-function pilihWire(i){pilihKawat=i;dipilih=null;gambarIns()}
+/* ===== bilah tombol cepat =================================================
+   Muncul di kanan atas kanvas begitu sebuah komponen dipilih, dan
+   menghilang saat panel detail dibuka — supaya fungsi yang sama tidak
+   tampil di dua tempat sekaligus.
+   ========================================================================= */
+const elCepat=document.getElementById('cepat');
+function segarkanCepat(){
+  const tampil = !!dipilih && !sheet.classList.contains('buka');
+  elCepat.classList.toggle('tampil',tampil);
+}
+elCepat.addEventListener('pointerdown',e=>e.stopPropagation());
+elCepat.querySelectorAll('button[data-c]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    if(!dipilih) return;
+    rekam();
+    const c=b.dataset.c;
+    if(c==='putar')   dipilih.rot=(dipilih.rot+1)%4;
+    if(c==='cerminH') dipilih.cx=dipilih.cx?0:1;
+    /* Cermin tegak = cermin datar + putar 180 derajat; satu penanda cukup. */
+    if(c==='cerminV'){ dipilih.cx=dipilih.cx?0:1; dipilih.rot=(dipilih.rot+2)%4 }
+    if(c==='hapus'){
+      const id=dipilih.id;
+      M.kawat=M.kawat.filter(w=>w.a.split(':')[0]!==id && w.b.split(':')[0]!==id);
+      M.komponen=M.komponen.filter(x=>x.id!==id);
+      pilihKomp(null);
+    }
+    segarkan(); gambarIns();
+  });
+});
+function pilihKomp(k){dipilih=k;pilihKawat=-1;gambarIns();segarkanCepat()}
+function pilihWire(i){pilihKawat=i;dipilih=null;gambarIns();segarkanCepat()}
 
 function gambarIns(){
   elIns.innerHTML='';
@@ -3943,6 +3990,8 @@ document.addEventListener('click',()=>{
   document.getElementById('subContoh').classList.remove('buka');
   const ss=document.getElementById('subSkala');
   if(ss) ss.classList.remove('buka');
+  const sr=document.getElementById('subRecent');
+  if(sr) sr.classList.remove('buka');
 });
 document.getElementById('mContohBuka').addEventListener('click',e=>{
   e.stopPropagation();
@@ -4473,32 +4522,172 @@ function pas(){
   pan.x=x0-(lebarCSS/zoom-(x1-x0))/2;
   pan.y=y0-(tinggiCSS/zoom-(y1-y0))/2;
 }
-document.getElementById('mSimpan').addEventListener('click',tutupMenu(()=>{
+/* ===== berkas: simpan, simpan sebagai, riwayat, simpan otomatis ===========
+   Ekstensi khusus .sbn dipakai supaya berkas rangkaian tidak tertukar dengan
+   JSON lain, tetapi ISINYA tetap JSON — jadi masih bisa dibuka dan diperiksa
+   dengan penyunting teks biasa. Berkas .json lama tetap bisa dibuka.
+   ========================================================================= */
+const EKS='.sbn';
+const KUNCI_AUTO='simbion:auto';
+const KUNCI_RECENT='simbion:recent';
+let peganganBerkas=null;        /* handle File System Access, bila didukung */
+
+const namaAman=()=>(namaProyek||'Rangkaian').replace(/[^\w\-]+/g,'_').slice(0,60);
+const adaFSA=()=>typeof window.showSaveFilePicker==='function';
+const JENIS_BERKAS=[{description:'Rangkaian SIMBION',accept:{'application/json':['.sbn','.json']}}];
+
+function unduhBiasa(){
   const blob=new Blob([potret()],{type:'application/json'});
   const a=document.createElement('a');
-  const berkas=(namaProyek||'Rangkaian').replace(/[^\w\-]+/g,'_').slice(0,60);
-  a.href=URL.createObjectURL(blob); a.download=berkas+'.json'; a.click();
+  a.href=URL.createObjectURL(blob); a.download=namaAman()+EKS; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-}));
+}
+function kabarSingkat(t,warna){
+  elPeringatan.style.color=warna||C.ok;
+  elPeringatan.textContent=t;
+  setTimeout(()=>{ if(elPeringatan.textContent===t){elPeringatan.textContent='';
+    elPeringatan.style.color=''} },2600);
+}
+async function tulisKeHandle(h){
+  const w=await h.createWritable();
+  await w.write(potret()); await w.close();
+}
+function segarkanNamaSimpan(){
+  const el=document.getElementById('mSimpanNama');
+  if(el) el.textContent=peganganBerkas?namaProyek:'(belum ada berkas)';
+}
+async function simpanSebagai(){
+  if(!adaFSA()){ unduhBiasa(); catatRecent(); kabarSingkat('Berkas diunduh'); return }
+  try{
+    const h=await showSaveFilePicker({suggestedName:namaAman()+EKS,types:JENIS_BERKAS});
+    peganganBerkas=h;
+    namaProyek=h.name.replace(/\.(sbn|json)$/i,'');
+    await tulisKeHandle(h);
+    catatRecent(); segarkanNamaSimpan(); gambarIns();
+    kabarSingkat('Tersimpan sebagai '+h.name);
+  }catch(e){ if(e && e.name!=='AbortError') kabarSingkat('Gagal menyimpan',C.hot) }
+}
+async function simpanBerkas(){
+  /* Sudah pernah disimpan -> perbarui berkas itu. Belum -> tanyakan tempatnya. */
+  if(!peganganBerkas) return simpanSebagai();
+  try{
+    await tulisKeHandle(peganganBerkas);
+    catatRecent(); kabarSingkat('Tersimpan: '+peganganBerkas.name);
+  }catch(e){ kabarSingkat('Gagal menyimpan — coba Simpan sebagai',C.hot) }
+}
+document.getElementById('mSimpan').addEventListener('click',tutupMenu(simpanBerkas));
+document.getElementById('mSimpanSbg').addEventListener('click',tutupMenu(simpanSebagai));
+
+/* ---- simpan otomatis: rangkaian tidak hilang walau halaman dimuat ulang ---- */
+let jamAuto=null;
+function simpanOtomatis(){
+  clearTimeout(jamAuto);
+  jamAuto=setTimeout(()=>{
+    try{ localStorage.setItem(KUNCI_AUTO,potret()) }catch(_){}
+  },600);            /* ditunda sebentar supaya tidak menulis tiap gerakan */
+}
+function pulihkanOtomatis(){
+  try{
+    const t=localStorage.getItem(KUNCI_AUTO);
+    if(!t) return false;
+    const d=migrasi(JSON.parse(t));
+    if(!d||!d.k) return false;
+    pakai(d); return true;
+  }catch(_){ return false }
+}
+
+/* ---- daftar berkas yang terakhir dibuka atau disimpan ---- */
+function bacaRecent(){
+  try{ return JSON.parse(localStorage.getItem(KUNCI_RECENT))||[] }catch(_){ return [] }
+}
+function catatRecent(){
+  try{
+    const isi=potret();
+    let r=bacaRecent().filter(x=>x.nama!==namaProyek);
+    r.unshift({nama:namaProyek,waktu:Date.now(),isi});
+    r=r.slice(0,8);
+    /* Kuota localStorage terbatas; kalau penuh, buang yang paling lama
+       sampai muat, bukan gagal diam-diam. */
+    for(;;){
+      try{ localStorage.setItem(KUNCI_RECENT,JSON.stringify(r)); break }
+      catch(_){ r.pop(); if(!r.length) break }
+    }
+    isiRecent();
+  }catch(_){}
+}
+function isiRecent(){
+  const el=document.getElementById('subRecent'); if(!el) return;
+  const r=bacaRecent();
+  el.innerHTML='';
+  if(!r.length){
+    const p=document.createElement('p');
+    p.className='kosong'; p.style.padding='6px 10px';
+    p.textContent='Belum ada berkas'; el.appendChild(p); return;
+  }
+  for(const x of r){
+    const b=document.createElement('button');
+    const tg=new Date(x.waktu);
+    b.innerHTML='<span>'+x.nama.replace(/</g,'&lt;')+'</span>'+
+      '<span style="margin-left:auto;color:var(--muted);font-size:10px">'+
+      tg.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})+'</span>';
+    b.addEventListener('click',tutupMenu(()=>{
+      try{
+        const d=migrasi(JSON.parse(x.isi));
+        if(!d) throw 0;
+        rekam(); pakai(d);
+        peganganBerkas=null;        /* isinya dari riwayat, bukan dari berkas */
+        segarkanNamaSimpan(); pas(); segarkan(); simpanOtomatis();
+        kabarSingkat('Dibuka: '+x.nama);
+      }catch(_){ kabarSingkat('Berkas riwayat rusak',C.hot) }
+      el.classList.remove('buka');
+    }));
+    el.appendChild(b);
+  }
+}
+document.getElementById('mRecentBuka').addEventListener('click',e=>{
+  e.stopPropagation();
+  document.getElementById('subRecent').classList.toggle('buka');
+});
 const fBuka=document.getElementById('fBuka');
-document.getElementById('mBuka').addEventListener('click',tutupMenu(()=>fBuka.click()));
+document.getElementById('mBuka').addEventListener('click',tutupMenu(async ()=>{
+  /* Pemilih berkas asli memberi HANDLE, sehingga "Simpan" berikutnya bisa
+     langsung memperbarui berkas itu tanpa mengunduh salinan baru. */
+  if(typeof window.showOpenFilePicker==='function'){
+    try{
+      const [h]=await showOpenFilePicker({types:JENIS_BERKAS,multiple:false});
+      const f=await h.getFile();
+      terapkanBerkas(await f.text(), h);
+      return;
+    }catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  fBuka.click();
+}));
+function terapkanBerkas(teks,handle){
+  try{
+    const mentah=JSON.parse(teks);
+    if(!mentah.k) throw 0;
+    if(mentah.aplikasi && mentah.aplikasi!==APLIKASI &&
+       APLIKASI_LAMA.indexOf(mentah.aplikasi)<0)
+      throw new Error('Berkas ini bukan rangkaian '+APLIKASI);
+    const d=migrasi(mentah);
+    if(!d) throw new Error('Berkas dibuat oleh versi SIMBION yang lebih baru — '+
+      'mutakhirkan aplikasinya dulu');
+    rekam(); pakai(d);
+    peganganBerkas=handle||null;
+    if(handle) namaProyek=handle.name.replace(/\.(sbn|json)$/i,'');
+    segarkanNamaSimpan(); pas(); segarkan(); simpanOtomatis(); catatRecent();
+    kabarSingkat('Dibuka: '+namaProyek);
+  }catch(e){
+    elPeringatan.style.color='';
+    elPeringatan.textContent=(e&&e.message)?e.message:'Berkas tidak bisa dibaca';
+  }
+}
 fBuka.addEventListener('change',()=>{
   const f=fBuka.files[0]; if(!f) return;
   const fr=new FileReader();
-  fr.onload=()=>{
-    try{
-      const mentah=JSON.parse(fr.result);
-      if(!mentah.k) throw 0;
-      if(mentah.aplikasi && mentah.aplikasi!==APLIKASI &&
-         APLIKASI_LAMA.indexOf(mentah.aplikasi)<0)
-        throw new Error('Berkas ini bukan rangkaian '+APLIKASI);
-      const d=migrasi(mentah);
-      if(!d) throw new Error('Berkas dibuat oleh versi SIMBION yang lebih baru — '+
-        'mutakhirkan aplikasinya dulu');
-      rekam(); pakai(d); pas(); segarkan();
-    }catch(e){ elPeringatan.textContent=(e&&e.message)?e.message:'Berkas tidak bisa dibaca' }
-    fBuka.value='';
-  };
+  /* Jalur cadangan untuk peramban tanpa File System Access (Firefox, Safari):
+     tanpa handle, jadi "Simpan" nanti akan menanyakan tempatnya lagi. */
+  fr.onload=()=>{ terapkanBerkas(fr.result,null); fBuka.value='' };
   fr.readAsText(f);
 });
 function muatContoh(){
@@ -4574,7 +4763,7 @@ function hitung(dtSim){
   }
   return r;
 }
-function segarkan(){ hasil=hitung(0); gambarUkur(); kabar(); setRiwayat() }
+function segarkan(){ hasil=hitung(0); gambarUkur(); kabar(); setRiwayat(); simpanOtomatis() }
 function resetWaktu(){
   resetKeadaan(); vMaks.clear(); jejak.clear(); setelanKanal.clear(); sigCtl='';
   nolkanRekam(); segarkan();
@@ -4822,6 +5011,7 @@ function nilaiAlatBunyi(k){
    itu pendaftarannya dijaga: berkas tunggal yang dibuka langsung dari folder
    tetap berfungsi penuh, hanya tidak bisa dipasang sebagai aplikasi.
    ========================================================================== */
+let mintaMuatUlang=false;
 const pitaBaru=document.getElementById('pitaBaru');
 document.getElementById('bTundaBaru').addEventListener('click',()=>
   pitaBaru.classList.remove('tampil'));
@@ -4835,6 +5025,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
           /* 'installed' + sudah ada controller = ini pembaruan, bukan pasang pertama */
           if(sw.state==='installed' && navigator.serviceWorker.controller){
             document.getElementById('bMuatUlang').onclick=()=>{
+              mintaMuatUlang=true;
               sw.postMessage({aksi:'lewatiTunggu'});
             };
             /* Tanyakan nomor versinya kepada service worker yang baru, supaya
@@ -4858,9 +5049,14 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
         if(!document.hidden) reg.update().catch(()=>{});
       });
     }).catch(()=>{});
+    /* HANYA muat ulang bila pengguna menekan tombolnya. Sebelumnya halaman
+       ikut dimuat ulang setiap kali service worker mengambil alih — termasuk
+       pada pemasangan PERTAMA (karena activate memanggil clients.claim()).
+       Akibatnya rangkaian yang sedang dikerjakan lenyap tanpa sebab yang
+       terlihat, biasanya beberapa detik setelah halaman dibuka. */
     let sudahMuatUlang=false;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(sudahMuatUlang) return;
+      if(!mintaMuatUlang || sudahMuatUlang) return;
       sudahMuatUlang=true; location.reload();
     });
   });
@@ -4891,6 +5087,11 @@ if(iOS && !terpasang && /^https?:$/.test(location.protocol)){
   });
 }
 
+/* Jaring pengaman terakhir: tulis segera saat halaman ditinggalkan atau
+   disembunyikan, tanpa menunggu penundaan simpan otomatis. */
+const tulisAuto=()=>{ try{ localStorage.setItem(KUNCI_AUTO,potret()) }catch(_){} };
+addEventListener('pagehide',tulisAuto);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) tulisAuto() });
 addEventListener('resize',()=>ukur());
 addEventListener('orientationchange',()=>setTimeout(ukur,120));
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) ukur() });
@@ -4906,7 +5107,12 @@ else setInterval(()=>{
 
 document.getElementById('versiApp').textContent='SIMBION '+VERSI_APP;
 segarkanMenu();
-ukur(); setModeTampil(1); gambarIns(); muatContoh(); tumpukan.length=0; setRiwayat();
+ukur(); setModeTampil(1);
+/* Mulai dari papan KOSONG, bukan contoh — kecuali ada pekerjaan yang belum
+   selesai dari sesi sebelumnya, yang dipulihkan apa adanya. */
+if(!pulihkanOtomatis()){ M.komponen.length=0; M.kawat.length=0; nomorBerikut=1; pan={x:-30,y:-30}; zoom=1 }
+gambarIns(); isiRecent(); segarkanNamaSimpan();
+tumpukan.length=0; majuStack.length=0; setRiwayat(); segarkan();
 requestAnimationFrame(bingkai);
 </script>
 </body>
