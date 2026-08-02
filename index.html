@@ -285,11 +285,16 @@
       <button id="mContoh">seri–paralel DC</button>
       <button id="mContohPot">pembagi tegangan potensiometer</button>
       <button id="mContohLED">LED &amp; pembatas arus</button>
+      <button id="mContohSW">transistor sebagai saklar</button>
+      <button id="mContohBz">alarm cahaya: LDR + buzzer</button>
       <button id="mContohPS">penyearah jembatan + filter</button>
       <button id="mContohTrafo">catu daya trafo → jembatan → filter</button>
-      <button id="mContohSW">transistor sebagai saklar</button>
       <button id="mContohCE">penguat emitor bersama</button>
       <button id="mContohOA">op-amp penguat membalik</button>
+      <button id="mContohCT">catu daya simetris ±5 V (trafo CT)</button>
+      <button id="mContohSpk">nada ke speaker</button>
+      <button id="mContohGel">bentuk gelombang ke speaker</button>
+      <button id="mContohRy">relay: saklar kecil, beban besar</button>
     </div>
     <button id="mBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v3h16v-3"/></svg>Buka berkas…</button>
     <button id="mSimpan"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg>Simpan berkas</button>
@@ -1071,9 +1076,12 @@ function majuWaktu(M,dtSim,alatCuplik,dtCuplik){
         const q=R.src.find(x=>x.id===a.id);
         cuplik.push({id:a.id,tipe:'i',r:q?q.r:-1,v:[]});
       }else{
+        /* Probe mengukur terhadap massa; voltmeter DAN speaker mengukur
+           beda tegangan antara kedua kakinya. */
+        const duaKaki=(a.jenis==='volt'||a.jenis==='speaker');
         cuplik.push({id:a.id,tipe:'v',v:[],
           a:net.petaSimpul.get(a.id+':0')||0,
-          b:(a.jenis==='volt'?(net.petaSimpul.get(a.id+':1')||0):0)});
+          b:duaKaki?(net.petaSimpul.get(a.id+':1')||0):0});
       }
     }
   }
@@ -1494,7 +1502,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.7';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='2.8';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -4306,6 +4314,116 @@ document.getElementById('mContohOA').addEventListener('click',tutupMenu(()=>{
   // Skala dipertahankan di 2 (Volt/div), Jendela (Time/div) diubah ke 8 (0.02 s / 20 ms)
   selesaiContoh(2,6);
 }));
+/* ===== contoh untuk komponen baru ==================================== */
+
+/* Catu daya simetris: satu trafo CT memberi +5 V dan -5 V sekaligus —
+   inilah cara mencatu op-amp di praktikum. */
+document.getElementById('mContohCT').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const ac=tambahKomponen('sumberac',100,340); ac.prop.Vp=311.1; ac.prop.f=50;
+  const t =tambahKomponen('trafoct',260,340); t.prop.n=12/220;
+  const br=tambahKomponen('dioda4',420,340);
+  const cp=tambahKomponen('elco',560,240); cp.prop.C=2200; cp.rot=1;
+  const cn=tambahKomponen('elco',560,460); cn.prop.C=2200; cn.rot=1;
+  const up=tambahKomponen('reg78',700,240); up.prop.Vreg=5;
+  const un=tambahKomponen('reg79',700,460); un.prop.Vreg=5;
+  const rp=tambahKomponen('resistor',860,240); rp.prop.R=100; rp.rot=1;
+  const rn=tambahKomponen('resistor',860,460); rn.prop.R=100; rn.rot=1;
+  const pp=tambahKomponen('probe',820,180);
+  const pn=tambahKomponen('probe',820,520);
+  const g =tambahKomponen('massa',300,560);
+  [[ac.id+':0',t.id+':0'],[ac.id+':1',t.id+':1'],
+   [t.id+':2',br.id+':0'],[t.id+':4',br.id+':1'],[t.id+':3',g.id+':0'],
+   [br.id+':2',cp.id+':0'],[cp.id+':1',g.id+':0'],
+   [br.id+':3',cn.id+':0'],[cn.id+':1',g.id+':0'],
+   [cp.id+':0',up.id+':0'],[up.id+':1',g.id+':0'],
+   [up.id+':2',rp.id+':0'],[rp.id+':1',g.id+':0'],[up.id+':2',pp.id+':0'],
+   [cn.id+':0',un.id+':0'],[un.id+':1',g.id+':0'],
+   [un.id+':2',rn.id+':0'],[rn.id+':1',g.id+':0'],[un.id+':2',pn.id+':0']
+  ].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(1);
+}));
+
+/* Alarm cahaya: LDR menyalakan buzzer lewat transistor. Geser tuas cahaya
+   pada LDR untuk menyalakan dan mematikannya. */
+document.getElementById('mContohBz').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const v =tambahKomponen('vcc',140,180); v.prop.V=9;
+  const ld=tambahKomponen('ldr',140,300); ld.prop.pos=.8; ld.rot=1;
+  const r1=tambahKomponen('resistor',140,440); r1.prop.R=10000; r1.rot=1;
+  const rb=tambahKomponen('resistor',280,380); rb.prop.R=4700;
+  const q =tambahKomponen('npn',420,380); q.prop.bf=200;
+  const v2=tambahKomponen('vcc',480,180); v2.prop.V=9;
+  const bz=tambahKomponen('buzzer',480,280); bz.prop.f=2400; bz.prop.Vnom=9;
+  bz.prop.Vmin=2; bz.prop.R=200; bz.rot=1;
+  const pv=tambahKomponen('probe',220,300);
+  const g =tambahKomponen('massa',140,540);
+  [[v.id+':0',ld.id+':0'],[ld.id+':1',r1.id+':0'],[r1.id+':1',g.id+':0'],
+   [ld.id+':1',pv.id+':0'],[ld.id+':1',rb.id+':0'],[rb.id+':1',q.id+':0'],
+   [v2.id+':0',bz.id+':0'],[bz.id+':1',q.id+':1'],[q.id+':2',g.id+':0']
+  ].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(1);
+}));
+
+/* Nada ke speaker. Sengaja pada kecepatan 1x, karena hanya di situ bunyi
+   yang keluar benar tingginya. */
+document.getElementById('mContohSpk').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  /* Resistor seri sengaja KECIL: speaker 8 ohm akan tenggelam di belakang
+     resistor ratusan ohm, dan yang terdengar tinggal bisikan. */
+  const ac=tambahKomponen('sumberac',180,300); ac.prop.Vp=3; ac.prop.f=440;
+  ac.prop.bentuk=0;
+  const r =tambahKomponen('resistor',340,220); r.prop.R=10;
+  const sp=tambahKomponen('speaker',520,300); sp.prop.R=8; sp.prop.Vnom=1.5;
+  const p =tambahKomponen('probe',440,220);
+  const g =tambahKomponen('massa',180,460);
+  [[ac.id+':0',r.id+':0'],[r.id+':1',sp.id+':0'],[r.id+':1',p.id+':0'],
+   [sp.id+':1',g.id+':0'],[ac.id+':1',g.id+':0']
+  ].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(0,9);           /* 1x, dan skop terbuka pada 10 ms */
+}));
+
+/* Relay: arus kecil dari push button mengendalikan bohlam berarus besar,
+   sekaligus memperlihatkan kontak NC yang mati saat relay tertarik. */
+document.getElementById('mContohRy').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  const v =tambahKomponen('vcc',140,200); v.prop.V=12;
+  const pb=tambahKomponen('pbno',140,320); pb.prop.tutup=0; pb.rot=1;
+  const ry=tambahKomponen('relay',300,420);
+  const v2=tambahKomponen('vcc',480,180); v2.prop.V=12;
+  const b1=tambahKomponen('bohlam',560,300); b1.prop.R=24; b1.prop.Pn=6; b1.rot=1;
+  const b2=tambahKomponen('bohlam',680,300); b2.prop.R=24; b2.prop.Pn=6; b2.rot=1;
+  const g =tambahKomponen('massa',140,560);
+  [[v.id+':0',pb.id+':0'],[pb.id+':1',ry.id+':0'],[ry.id+':1',g.id+':0'],
+   [v2.id+':0',ry.id+':2'],
+   [ry.id+':3',b1.id+':0'],[b1.id+':1',g.id+':0'],
+   [ry.id+':4',b2.id+':0'],[b2.id+':1',g.id+':0']
+  ].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(1);
+}));
+
+/* Empat bentuk gelombang, satu speaker. Ganti bentuknya di panel sumber AC
+   dan dengarkan bedanya — sinus halus, kotak kasar, gigi gergaji tajam. */
+document.getElementById('mContohGel').addEventListener('click',tutupMenu(()=>{
+  mulaiContoh();
+  /* Potensiometer sebagai pengatur kenyaringan. Nilainya harus rendah
+     (100 ohm, bukan 1 kilo-ohm) supaya speaker 8 ohm tidak tenggelam. */
+  const ac=tambahKomponen('sumberac',180,300); ac.prop.Vp=12; ac.prop.f=220;
+  ac.prop.bentuk=1;                       /* mulai dari segitiga */
+  const pot=tambahKomponen('potensio',340,220); pot.prop.R=100; pot.prop.pos=.3;
+  /* Vnom harus DI ATAS puncak yang sebenarnya sampai ke speaker; kalau di
+     bawahnya, gelombang terpotong dan keempat bentuk terdengar sama kasar —
+     justru menghapus hal yang ingin ditunjukkan contoh ini. */
+  const sp=tambahKomponen('speaker',560,300); sp.prop.R=8; sp.prop.Vnom=2.8;
+  const p =tambahKomponen('probe',460,220);
+  const g =tambahKomponen('massa',180,460);
+  [[ac.id+':0',pot.id+':0'],[pot.id+':2',g.id+':0'],
+   [pot.id+':1',sp.id+':0'],[pot.id+':1',p.id+':0'],
+   [sp.id+':1',g.id+':0'],[ac.id+':1',g.id+':0']
+  ].forEach(([a,b])=>sambung(a,b));
+  selesaiContoh(0,9);
+}));
+
 document.getElementById('mBersih').addEventListener('click',tutupMenu(()=>{
   rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
   pinTertunda=null; pilihKomp(null); segarkan();
@@ -4431,10 +4549,18 @@ function muatContoh(){
    langkah solver, karena di bawah itu tidak ada informasi baru. */
 function dtCuplikSekarang(){
   const lebar=JENDELA[iJendela];
-  if(!lebar) return 0;            /* mode "Semua": satu cuplikan per bingkai */
-  return lebar/CUPLIK_PER_JENDELA;
+  /* Speaker butuh laju cuplikan setara kartu suara, terlepas dari basis waktu
+     osiloskop — termasuk pada mode "Semua" yang biasanya hanya satu cuplikan
+     per bingkai. Tanpa ini, speaker bisu setiap kali skop disetel lebar. */
+  const dtAudio = adaPembunyi() ? 1/48000 : 0;
+  if(!lebar) return dtAudio;
+  const dtSkop=lebar/CUPLIK_PER_JENDELA;
+  return dtAudio ? Math.min(dtSkop,dtAudio) : dtSkop;
 }
-const alatSkop=()=>M.komponen.filter(k=>k.jenis==='probe' ||
+/* Speaker IKUT dicuplik walau bukan alat ukur: gelombangnyalah yang dikirim
+   ke kartu suara. Inilah yang dulu hilang sehingga speaker tak pernah
+   berbunyi di rangkaian tanpa probe. */
+const alatSkop=()=>M.komponen.filter(k=>k.jenis==='probe' || k.jenis==='speaker' ||
   ((k.jenis==='volt'||k.jenis==='ampere') && k.prop.skop))
   .map(k=>({id:k.id,jenis:k.jenis}));
 function hitung(dtSim){
@@ -4630,26 +4756,39 @@ function suapAudio(dtNyata){
   const sr=audioCtx.sampleRate;
   const perlu=Math.min(Math.round(dtNyata*sr),2048);
   if(perlu<=0) return;
-  const lambat=SKALA[iSkala]<0.999;
-  let amp=0, adaSpeaker=false, adaBuzzer=false, fBuzzer=2000, vBuzzer=0;
 
-  for(const k of pembunyi){
+  /* Speaker hanya jujur pada kecepatan 1x: di gerak lambat, waktu simulasi
+     tidak sejalan dengan waktu nyata sehingga nadanya akan salah. */
+  const lambat=SKALA[iSkala]<0.999;
+  const speaker=pembunyi.filter(k=>k.jenis==='speaker');
+  const buzzer =pembunyi.filter(k=>k.jenis==='buzzer');
+
+  let adaBuzzer=false, fBuzzer=2000, vBuzzer=0;
+  for(const k of buzzer){
     const v=Math.abs(nilaiAlatBunyi(k));
-    if(k.jenis==='buzzer'){
-      if(v>Math.max(k.prop.Vmin,0.1)){ adaBuzzer=true; fBuzzer=Math.max(k.prop.f,50);
-        vBuzzer=Math.max(vBuzzer,Math.min(v/Math.max(k.prop.Vnom,0.1),1)) }
-    }else{
-      adaSpeaker=true;
-      amp=Math.max(amp,Math.min(v/Math.max(k.prop.Vnom,0.1),1));
+    if(v>Math.max(k.prop.Vmin,0.1)){
+      adaBuzzer=true;
+      fBuzzer=Math.max(k.prop.f,50);
+      vBuzzer=Math.max(vBuzzer,Math.min(v/Math.max(k.prop.Vnom,0.1),1));
     }
   }
-  /* speaker hanya berbunyi pada kecepatan 1x (lihat catatan di atas) */
-  const pakaiSpeaker=adaSpeaker&&!lambat;
-  if(!adaBuzzer&&!pakaiSpeaker){ audioGain.gain.value=0; bunyiAktif=false; return }
-  bunyiAktif=true;
-  audioGain.gain.value=0.12;
 
-  const seri=(hasil.cuplik&&hasil.cuplik.length)?hasil.cuplik:null;
+  /* Kumpulkan deret cuplikan milik TIAP speaker berdasarkan id-nya.
+     Versi sebelumnya memakai cuplik[0] — yang sebenarnya milik probe, bukan
+     speaker, sehingga di rangkaian tanpa probe tidak ada bunyi sama sekali. */
+  const petaC=new Map((hasil.cuplik||[]).map(c=>[c.id,c.v]));
+  const jalurSpeaker=[];
+  if(!lambat) for(const k of speaker){
+    const v=petaC.get(k.id);
+    if(v&&v.length) jalurSpeaker.push({v,vnom:Math.max(k.prop.Vnom,0.1)});
+  }
+
+  if(!adaBuzzer&&!jalurSpeaker.length){
+    audioGain.gain.value=0; bunyiAktif=false; return;
+  }
+  bunyiAktif=true;
+  audioGain.gain.value=0.14;
+
   for(let i=0;i<perlu;i++){
     let x=0;
     if(adaBuzzer){
@@ -4657,24 +4796,15 @@ function suapAudio(dtNyata){
       if(fasaBuzzer>2*Math.PI) fasaBuzzer-=2*Math.PI;
       x+=vBuzzer*(Math.sin(fasaBuzzer)>=0?0.45:-0.45);   /* buzzer = gelombang kotak */
     }
+    /* Bentuk gelombang speaker diambil apa adanya dari solver — itulah
+       sebabnya yang terdengar adalah sinyal rangkaiannya sendiri. */
+    for(const sp of jalurSpeaker){
+      const j=Math.min(sp.v.length-1,Math.floor(i*sp.v.length/perlu));
+      x+=Math.max(-1,Math.min(1,sp.v[j]/sp.vnom))*0.85;
+    }
     if(isiAudio<bufAudio.length){
       bufAudio[tulisAudio]=Math.max(-1,Math.min(1,x));
       tulisAudio=(tulisAudio+1)%bufAudio.length; isiAudio++;
-    }
-  }
-  /* Speaker: alirkan cuplikan tegangan sungguhan dari dalam putaran substep,
-     sehingga yang terdengar adalah bentuk gelombangnya sendiri. */
-  if(pakaiSpeaker&&seri){
-    /* dicampur pada penyangga yang baru saja ditulis */
-    let idx=(tulisAudio-perlu+bufAudio.length)%bufAudio.length;
-    const c=seri[0];
-    if(c&&c.v.length){
-      for(let i=0;i<perlu;i++){
-        const j=Math.floor(i*c.v.length/perlu);
-        const nilai=Math.max(-1,Math.min(1,c.v[j]/Math.max(pembunyi[0].prop.Vnom,0.1)));
-        bufAudio[idx]=Math.max(-1,Math.min(1,bufAudio[idx]+nilai*0.9));
-        idx=(idx+1)%bufAudio.length;
-      }
     }
   }
 }
