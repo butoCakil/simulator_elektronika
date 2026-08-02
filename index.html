@@ -1403,7 +1403,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.4';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='2.5';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -3869,24 +3869,43 @@ document.getElementById('mContohLED').addEventListener('click',tutupMenu(()=>{
 document.getElementById('mContohPS').addEventListener('click',tutupMenu(()=>{
   rekam();
   M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
-  const s  =tambahKomponen('sumberac',100,280); s.prop.Vp=12; s.prop.f=50;
-  const d1 =tambahKomponen('dioda',280,180);
-  const d2 =tambahKomponen('dioda',280,380);
-  const d3 =tambahKomponen('dioda',460,380);
-  const d4 =tambahKomponen('dioda',460,180);
-  const c  =tambahKomponen('kapasitor',620,280); c.prop.C=470; c.rot=1;
-  const r  =tambahKomponen('resistor',760,280); r.prop.R=1000; r.rot=1;
-  const p  =tambahKomponen('probe',620,180);
-  const g  =tambahKomponen('massa',760,420);
-  /* jembatan: d1,d4 dari simpul A; d2,d3 dari simpul B */
-  [[d1.id+':0',s.id+':0'],[d4.id+':1',s.id+':0'],
-   [d2.id+':0',s.id+':1'],[d3.id+':1',s.id+':1'],
-   [d1.id+':1',d2.id+':1'],[d1.id+':1',c.id+':0'],[c.id+':0',r.id+':0'],
-   [c.id+':0',p.id+':0'],
-   [d3.id+':0',d4.id+':0'],[d3.id+':0',c.id+':1'],[c.id+':1',r.id+':1'],
-   [r.id+':1',g.id+':0']].forEach(([a,b])=>sambung(a,b));
+  
+  // Inisialisasi komponen baru
+  const s   = tambahKomponen('sumberac', 100, 280); s.prop.Vp=12; s.prop.f=50;
+  
+  // 4 dioda sebelumnya diganti menjadi 1 komponen dioda jembatan (bridge)
+  const br  = tambahKomponen('dioda4', 240, 280);
+  
+  // Kapasitor diubah menjadi elco
+  const c   = tambahKomponen('elco', 400, 280); c.prop.C=100; c.rot=1;
+  
+  const r   = tambahKomponen('resistor', 540, 280); r.prop.R=1000; r.rot=1;
+  const p   = tambahKomponen('probe', 540, 200);
+  const g   = tambahKomponen('massa', 540, 400);
+  
+  // Tambahan komponen simpul
+  const n1  = tambahKomponen('simpul', 400, 380);
+  
+  // Sambungan kawat (dioda4 menggunakan pin 0 & 1 untuk AC, 2 positif, 3 negatif)
+  [
+    [s.id+':0', br.id+':0'],   // Sumber AC ke AC in 1 bridge
+    [s.id+':1', br.id+':1'],   // Sumber AC ke AC in 2 bridge
+    [br.id+':2', c.id+':0'],   // Output positif bridge ke positif elco
+    [br.id+':3', n1.id+':0'],  // Output negatif bridge ke simpul
+    [n1.id+':0', g.id+':0'],   // Simpul ke massa
+    [c.id+':1', n1.id+':0'],   // Negatif elco ke simpul
+    [r.id+':1', g.id+':0'],    // Resistor bawah ke massa
+    [r.id+':0', c.id+':0'],    // Resistor atas ke jalur positif
+    [p.id+':0', r.id+':0']     // Probe ke jalur positif
+  ].forEach(([a,b])=>sambung(a,b));
+  
   hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
-  iSkala=2; labelSkala(); iJendela=3; labelJendela(); bukaScope(true);
+  
+  // Buka CRO terlebih dahulu untuk menghindari nilai ter-reset
+  bukaScope(true);
+  iSkala=2; labelSkala(); 
+  iJendela=3; labelJendela(); 
+  
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
 document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
