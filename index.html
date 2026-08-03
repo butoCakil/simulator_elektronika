@@ -71,6 +71,12 @@
   .cepat button{width:42px;height:42px;padding:0;border-radius:3px;
     background:rgba(14,37,41,.94)}
   .cepat button .ik{width:1.5em;height:1.5em}
+  /* Hanya di layar sempit: di PC tombol Paskan sudah ada di bilah alat. */
+  .cepatKosong{position:absolute;top:10px;right:10px;z-index:8;display:none}
+  .cepatKosong button{width:42px;height:42px;padding:0;border-radius:3px;
+    background:rgba(14,37,41,.94)}
+  .cepatKosong button .ik{width:1.5em;height:1.5em}
+  @media(max-width:600px){ .cepatKosong.tampil{display:flex} }
   .cepatW{position:absolute;top:10px;right:10px;z-index:9;display:none;gap:6px}
   .cepatW.tampil{display:flex}
   .cepatW button{width:42px;height:42px;padding:0;border-radius:3px;
@@ -81,7 +87,8 @@
      nilai utama tanpa perlu membuka panel detail. */
   .nilaiPop{position:absolute;top:60px;right:10px;z-index:10;display:none;
     background:var(--panel-up);border:1px solid var(--rule);border-radius:3px;
-    padding:10px 12px;width:min(280px,calc(100vw - 24px));
+    padding:10px 12px;width:min(300px,calc(100vw - 24px));
+    max-height:min(60vh,420px);overflow-y:auto;overscroll-behavior:contain;
     box-shadow:0 12px 28px rgba(0,0,0,.45)}
   .nilaiPop.tampil{display:block}
   .nilaiPop .lbl{margin:0 0 6px}
@@ -299,6 +306,7 @@
     <div class="submenu" id="subSkala"></div>
     <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Reset waktu &amp; muatan</span></button>
     <button id="mLabel"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Label tegangan &amp; arus</span><span id="nLabel" style="margin-left:auto;color:var(--pilih)"></span></button>
+    <button id="mPanduan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 8h7M9 12h5"/></svg>Panduan penggunaan</button>
     <button id="mProyektor"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg><span>Mode proyektor</span><span id="nProy" style="margin-left:auto;color:var(--pilih)"></span></button>
     <button id="mKotak"><svg class="ik" viewBox="0 0 24 24" style="stroke-dasharray:3 2.5"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg><span>Tampilkan kotak area klik</span><span id="nKotak" style="margin-left:auto;color:var(--pilih)"></span></button>
     <button id="mPas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Paskan tampilan</button>
@@ -349,12 +357,20 @@
     <button data-c="nilai" title="Ubah nilai"><svg class="ik" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.4"/><circle cx="15" cy="16" r="2.4"/></svg></button>
     <button data-c="hapus" title="Hapus" style="color:var(--hot);border-color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
   </div>
+  <div class="cepatKosong" id="cepatKosong">
+    <button id="bPasCepat" title="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
   <div class="cepatW" id="cepatW">
     <button data-w="belok" title="Ubah arah belokan kawat"><svg class="ik" viewBox="0 0 24 24"><path d="M4 19V9a3 3 0 0 1 3-3h13"/><path d="M16 2.5L20.5 6 16 9.5"/></svg></button>
     <button data-w="hapus" title="Hapus kawat" style="color:var(--hot);border-color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
   </div>
   <div class="nilaiPop" id="nilaiPop"></div>
   <div class="peringatan" id="peringatan"></div>
+  <div class="pita" id="pitaPasang">
+    <span id="pitaPasangTeks">Pasang SIMBION agar bisa dipakai tanpa internet</span>
+    <button id="bPitaPasang">Pasang</button>
+    <button id="bPitaTutup">Nanti</button>
+  </div>
   <div class="pita" id="pitaBaru">
     <span>Versi baru tersedia<span id="versiBaru"></span></span>
     <button id="bMuatUlang">Muat ulang</button>
@@ -1310,14 +1326,36 @@ function arusPerKawat(M,net,arusKomp){
       tidak dihitung supaya tidak melebar tanpa perlu.
    ========================================================================== */
 const P=40, KISI=20;
+/* ===== deret nilai pasaran ================================================
+   Angka pokok deret E24 yang benar-benar ada di toko, dikalikan pangkat
+   sepuluh. Dibangkitkan, bukan diketik satu per satu, supaya tidak ada
+   nilai yang terlewat atau salah ketik di satu dekade saja.
+   ========================================================================= */
+const POKOK=[1,1.2,1.5,1.8,2,2.2,2.7,3,3.3,3.9,4.7,5.1,5.6,6.8,8.2];
+function deretPasar(dMin,dMaks,batasMin,batasMaks){
+  const out=[];
+  for(let d=dMin;d<=dMaks;d++)
+    for(const m of POKOK){
+      const v=+(m*Math.pow(10,d)).toPrecision(4);
+      if(v>=batasMin-1e-12 && v<=batasMaks+1e-12) out.push(v);
+    }
+  return out;
+}
+const DERET_OHM   = deretPasar(0,7,1,1e7);        /* 1 Ω .. 10 MΩ */
+const DERET_FARAD = deretPasar(-3,5,0.001,1e6);   /* 1 nF .. 1 F, satuan µF */
+const DERET_HENRY = deretPasar(-2,5,0.01,1e5);    /* 0,01 mH .. 100 H */
+const DERET_HZ    = [1,10,20,50,60,100,200,400,500,800,1000,2000,5000,10000,15000,20000];
+const DERET_VOLT  = [1.5,3,4.5,5,6,9,12,15,18,24,30,48];
+
 const JENIS={
   sumber:{nama:'Sumber DC',pin:[[0,-P],[0,P]],kotak:[-19,-P,19,P],prop:{E:12},
-    field:[{k:'E',nm:'Tegangan',sat:'V',jenis:'angka',min:0,max:30,step:.1}],gambar:gSumber},
+    field:[{k:'E',nm:'Tegangan',sat:'V',jenis:'angka',min:0,max:60,step:.1},
+           {k:'E',nm:'Tegangan umum',jenis:'daftar',fmt:'volt',opsi:DERET_VOLT}],
+    gambar:gSumber},
   resistor:{nama:'Resistor',pin:[[-P,0],[P,0]],kotak:[-P,-10,P,10],prop:{R:220},
     field:[{k:'R',nm:'Resistansi',sat:'Ω',jenis:'angka',min:1,max:1e7,step:1,log:true},
-           {k:'R',nm:'Pilih nilai seri E12',jenis:'daftar',fmt:'ohm',
-            opsi:[10,22,47,100,220,470,1000,2200,4700,10000,22000,47000,
-                  100000,220000,470000,1e6,2.2e6,4.7e6,1e7]}],gambar:gResistor},
+           {k:'R',nm:'Nilai pasaran',jenis:'daftar',fmt:'ohm',opsi:DERET_OHM}],
+    gambar:gResistor},
   saklar:{nama:'Saklar',pin:[[-P,0],[P,0]],kotak:[-P,-17,P,9],
     tuas:[{dx:0,dy:-30,aksi:'toggle'}],prop:{tutup:1},
     field:[{k:'tutup',nm:'Keadaan',jenis:'daftar',
@@ -1330,20 +1368,19 @@ const JENIS={
     field:[{k:'nama',nm:'Nama alat',jenis:'teks'}],gambar:gProbe},
   kapasitor:{nama:'Kapasitor',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{C:10},
     field:[{k:'C',nm:'Kapasitansi',sat:'µF',jenis:'angka',min:.001,max:1e6,step:.001,log:true},
-           {k:'C',nm:'Pilih nilai umum',jenis:'daftar',fmt:'farad',
-            opsi:[.001,.01,.1,.22,.47,1,2.2,4.7,10,22,47,100,220,470,1000,
-                  2200,4700,10000,47000,100000,470000,1e6]}],gambar:gKapasitor},
+           {k:'C',nm:'Nilai pasaran',jenis:'daftar',fmt:'farad',opsi:DERET_FARAD}],
+    gambar:gKapasitor},
   induktor:{nama:'Induktor',pin:[[-P,0],[P,0]],kotak:[-P,-14,P,8],prop:{L:100},
     field:[{k:'L',nm:'Induktansi',sat:'mH',jenis:'angka',min:.01,max:1e5,step:.01,log:true},
-           {k:'L',nm:'Pilih nilai umum',jenis:'daftar',fmt:'henry',
-            opsi:[.1,1,4.7,10,47,100,470,1000,4700,10000,100000]}],gambar:gInduktor},
+           {k:'L',nm:'Nilai pasaran',jenis:'daftar',fmt:'henry',opsi:DERET_HENRY}],
+    gambar:gInduktor},
   potensio:{nama:'Potensiometer',pin:[[-P,0],[0,-P],[P,0]],kotak:[-P,-P,P,16],
     tuas:[{dx:-18,dy:-52,aksi:'kurang'},{dx:18,dy:-52,aksi:'tambah'}],
     prop:{R:10000,pos:.5},
     field:[{k:'pos',nm:'Kedudukan penyapu',sat:'',jenis:'angka',min:0,max:1,step:.01},
            {k:'R',nm:'Resistansi total',sat:'Ω',jenis:'angka',min:100,max:1e7,step:1,log:true},
-           {k:'R',nm:'Pilih nilai umum',jenis:'daftar',fmt:'ohm',
-            opsi:[470,1000,4700,10000,47000,100000,470000,1e6]}],
+           {k:'R',nm:'Nilai pasaran',jenis:'daftar',fmt:'ohm',
+            opsi:DERET_OHM.filter(v=>v>=100)}],
     gambar:gPotensio},
   trafoct:{nama:'Trafo CT',pin:[[-P,-P],[-P,P],[P,-30],[P,0],[P,30]],kotak:[-P,-P,P,P],
     prop:{n:12/220,Lm:20,Rp:8,Rs:.5},
@@ -1405,10 +1442,11 @@ const JENIS={
               {v:1,t:'1 V'},{v:5,t:'5 V'},{v:12,t:'12 V'},{v:24,t:'24 V'},
               {v:50,t:'50 V'},{v:100,t:'100 V'},{v:155.6,t:'110 V PLN (puncak 155,6 V)'},
               {v:311.1,t:'220 V PLN (puncak 311,1 V)'}]},
-           {k:'f',nm:'Frekuensi',sat:'Hz',jenis:'angka',min:.5,max:5000,step:.5},
-           {k:'f',nm:'Pilih frekuensi',jenis:'daftar',opsi:[
-              {v:1,t:'1 Hz (pelan)'},{v:10,t:'10 Hz'},{v:50,t:'50 Hz (PLN)'},
-              {v:60,t:'60 Hz'},{v:1000,t:'1 kHz'}]},
+           /* 20 kHz: batas atas pendengaran, dan sesuai daftar pilihan di
+              bawahnya. Batas lama 5 kHz membuat pilihan 10-20 kHz terpangkas
+              diam-diam begitu kotak angkanya disentuh. */
+           {k:'f',nm:'Frekuensi',sat:'Hz',jenis:'angka',min:.5,max:20000,step:.5,log:true},
+           {k:'f',nm:'Pilih frekuensi',jenis:'daftar',fmt:'hz',opsi:DERET_HZ},
            {k:'bentuk',nm:'Bentuk gelombang',jenis:'daftar',opsi:[
               {v:0,t:'Sinus'},{v:1,t:'Segitiga'},{v:2,t:'Gigi gergaji'},{v:3,t:'Kotak'}]}],
     gambar:gSumberAC},
@@ -1419,8 +1457,8 @@ const JENIS={
   massa:{nama:'Massa (GND)',pin:[[0,-20]],kotak:[-15,-20,15,15],prop:{},field:[],gambar:gMassa},
   elco:{nama:'Kapasitor Elco',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{C:100},
     field:[{k:'C',nm:'Kapasitansi',sat:'µF',jenis:'angka',min:.1,max:1e5,step:.1,log:true},
-           {k:'C',nm:'Pilih nilai umum',jenis:'daftar',fmt:'farad',
-            opsi:[1,2.2,4.7,10,22,47,100,220,470,1000,2200,4700,10000]}],
+           {k:'C',nm:'Nilai pasaran',jenis:'daftar',fmt:'farad',
+            opsi:DERET_FARAD.filter(v=>v>=1&&v<=1e5)}],
     gambar:gElco},
   bohlam:{nama:'Bohlam',pin:[[-P,0],[P,0]],kotak:[-P,-16,P,16],prop:{R:100,Pn:1},
     field:[{k:'R',nm:'Resistansi filamen',sat:'Ω',jenis:'angka',min:1,max:10000,step:1,log:true},
@@ -1546,7 +1584,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='3.0';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.2';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -2992,6 +3030,8 @@ function segarkanCepat(){
   const adaKawat = pilihKawat>=0 && !!M.kawat[pilihKawat] && !sheetBuka;
   elCepat.classList.toggle('tampil',adaKomp);
   elCepatW.classList.toggle('tampil',adaKawat);
+  const elKosong=document.getElementById('cepatKosong');
+  if(elKosong) elKosong.classList.toggle('tampil',!adaKomp && !adaKawat && !sheetBuka);
   if(!adaKomp) tutupNilaiPop();
 }
 
@@ -3005,18 +3045,31 @@ function bukaNilaiPop(){
   if(!dipilih){ tutupNilaiPop(); return }
   const def=JENIS[dipilih.jenis]||{};
   const medan=(def.field||[]);
-  const fTeks=medan.find(f=>f.jenis==='teks');
-  const fAngka=medan.find(f=>f.jenis==='angka');
-  const f=fTeks||fAngka;
-  if(!f){
-    elNilaiPop.innerHTML='<p class="lbl">'+def.nama+'</p>'+
-      '<p class="kosong">Komponen ini tidak punya nilai yang bisa diatur.</p>';
-    elNilaiPop.classList.add('tampil'); return;
-  }
   elNilaiPop.innerHTML='';
   const jd=document.createElement('p');
-  jd.className='lbl'; jd.textContent=f.nm+(f.sat?' ('+f.sat+')':'');
+  jd.className='lbl'; jd.textContent=def.nama;
   elNilaiPop.appendChild(jd);
+  if(!medan.length){
+    const p=document.createElement('p');
+    p.className='kosong'; p.textContent='Tidak ada nilai yang bisa diatur.';
+    elNilaiPop.appendChild(p); elNilaiPop.classList.add('tampil'); return;
+  }
+  /* SEMUA medan ditampilkan, bukan satu — sumber AC misalnya butuh tegangan,
+     frekuensi, DAN bentuk gelombang sekaligus agar bilah cepat benar-benar
+     menggantikan panel detail untuk penyetelan sehari-hari. */
+  for(const f of medan) elNilaiPop.appendChild(barisNilai(f));
+  elNilaiPop.classList.add('tampil');
+}
+
+/* Satu baris kendali untuk satu medan. Ketiga jenis medan ditangani di sini
+   supaya panel cepat dan panel detail tidak bisa berbeda perilaku. */
+function barisNilai(f){
+  const kotak=document.createElement('div');
+  kotak.style.margin='0 0 9px';
+  const nm=document.createElement('p');
+  nm.className='lbl'; nm.style.cssText='margin:0 0 4px;font-size:10px';
+  nm.textContent=f.nm+(f.sat?' ('+f.sat+')':'');
+  kotak.appendChild(nm);
 
   if(f.jenis==='teks'){
     const inp=document.createElement('input');
@@ -3027,10 +3080,36 @@ function bukaNilaiPop(){
       inp.value=dipilih.prop[f.k];
       sigCtl=''; segarkan(); gambarIns();
     });
-    elNilaiPop.appendChild(inp);
-    elNilaiPop.classList.add('tampil');
-    setTimeout(()=>{inp.focus();inp.select()},30);
-    return;
+    kotak.appendChild(inp);
+    return kotak;
+  }
+
+  if(f.jenis==='daftar'){
+    const sel=document.createElement('select');
+    const fmtOpsi=FMT_OPSI[f.fmt]||fmtOhm;
+    let cocok=false;
+    f.opsi.forEach(o=>{
+      const v=(typeof o==='object')?o.v:o;
+      const t=(typeof o==='object')?o.t:fmtOpsi(o);
+      const op=document.createElement('option');
+      op.value=v; op.textContent=t;
+      if(Math.abs(v-dipilih.prop[f.k])<1e-9){ op.selected=true; cocok=true }
+      sel.appendChild(op);
+    });
+    /* Nilai sekarang belum tentu ada di daftar pasaran (mis. hasil geseran).
+       Tampilkan apa adanya di puncak daftar, jangan diam-diam menggantinya. */
+    if(!cocok){
+      const op=document.createElement('option');
+      op.value=dipilih.prop[f.k];
+      op.textContent=fmtOpsi(dipilih.prop[f.k])+'  (sekarang)';
+      op.selected=true; sel.insertBefore(op,sel.firstChild);
+    }
+    sel.addEventListener('change',()=>{
+      rekam(); dipilih.prop[f.k]=parseFloat(sel.value);
+      sigCtl=''; segarkan(); gambarIns(); bukaNilaiPop();
+    });
+    kotak.appendChild(sel);
+    return kotak;
   }
 
   const inp=document.createElement('input');
@@ -3050,7 +3129,7 @@ function bukaNilaiPop(){
   inp.addEventListener('change',()=>{
     const n=Math.min(Math.max(parseFloat(inp.value)||0,f.min),f.max);
     rekam(); dipilih.prop[f.k]=n; inp.value=n;
-    if(f.log) sl.value=keGeser(n); else sl.value=n;
+    sl.value=f.log?keGeser(n):n;
     segarkan(); gambarIns();
   });
   sl.addEventListener('input',()=>{
@@ -3058,8 +3137,8 @@ function bukaNilaiPop(){
     dipilih.prop[f.k]=v; inp.value=v; segarkan();
   });
   sl.addEventListener('change',()=>{rekam();gambarIns()});
-  elNilaiPop.append(inp,sl);
-  elNilaiPop.classList.add('tampil');
+  kotak.append(inp,sl);
+  return kotak;
 }
 elNilaiPop.addEventListener('pointerdown',e=>e.stopPropagation());
 
@@ -3402,6 +3481,7 @@ function fmtVdiv(v,sat){
 }
 const fmtNilai=(v,sat)=>sat==='A'?fmtA(v):km(v,3)+' V';
 const FMT_OPSI={ohm:fmtOhm,farad:fmtF,henry:fmtH,volt:fmtVolt,hz:fmtHz};
+
 /* Sebar kanal ke jatah divisinya masing-masing supaya tidak tumpang tindih,
    lalu pilih V/div supaya ayunannya mengisi jatah itu. */
 function idealKanal(k,i,n){
@@ -4190,6 +4270,12 @@ function setModeTampil(m){
 }
 bTampil.addEventListener('click',()=>setModeTampil(modeTampil+1));
 document.getElementById('bPas').addEventListener('click',()=>pas());
+document.getElementById('bPasCepat').addEventListener('click',e=>{e.stopPropagation();pas()});
+document.getElementById('mPanduan').addEventListener('click',tutupMenu(()=>{
+  /* Halaman panduan berada di sisi yang sama dengan aplikasi, jadi ikut
+     tersimpan luring bila sudah pernah dibuka. */
+  window.open('panduan.html','_blank','noopener');
+}));
 document.getElementById('mLabel').addEventListener('click',tutupMenu(()=>setModeTampil(modeTampil^1)));
 const bProyektor=document.getElementById('mProyektor');
 bProyektor.addEventListener('click',tutupMenu(()=>{
@@ -4674,6 +4760,21 @@ function pas(){
    JSON lain, tetapi ISINYA tetap JSON — jadi masih bisa dibuka dan diperiksa
    dengan penyunting teks biasa. Berkas .json lama tetap bisa dibuka.
    ========================================================================= */
+/* ==========================================================================
+   CATATAN — DITUNDA, menunggu masukan dari pemakaian nyata di kelas
+   --------------------------------------------------------------------------
+   (a) Pilihan jamak: memblok beberapa komponen + kawat sekaligus untuk
+       digeser, dihapus, atau disalin. Menuntut `dipilih` (satu komponen)
+       diubah menjadi himpunan, dan menyentuh riwayat urungkan.
+   (b) Potong / salin / tempel di bilah cepat. Menyalin komponen HARUS ikut
+       menyalin kawat di antaranya, dengan penomoran id yang baru.
+   (c) Model gestur: begitu ada blok, geser satu jari bentrok antara
+       "geser papan" dan "geser blok". Usul yang sedang dipertimbangkan:
+       geser dari area kosong = kotak pilihan; geser papan = dua jari
+       (di HP sudah alami karena pinch juga dua jari), di PC tombol tengah
+       atau spasi+geser.
+   Ketiganya satu pekerjaan, bukan tiga yang terpisah.
+   ========================================================================== */
 const EKS='.sbn';
 const KUNCI_AUTO='simbion:auto';
 const KUNCI_RECENT='simbion:recent';
@@ -5219,22 +5320,54 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 }
 
 /* tombol pasang: hanya muncul bila peramban menawarkannya */
+/* ===== ajakan memasang aplikasi ==========================================
+   Muncul pada kunjungan pertama, sekali saja: kalau ditutup, tidak muncul
+   lagi (dicatat di penyimpanan peramban). Menu ⋯ tetap menyediakan
+   "Pasang aplikasi" kapan pun pengguna berubah pikiran.
+   ========================================================================= */
+const KUNCI_TOLAK='simbion:tolakPasang';
+const pitaPasang=document.getElementById('pitaPasang');
+const sudahTerpasang=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function tampilkanPitaPasang(teks){
+  if(sudahTerpasang()) return;
+  try{ if(localStorage.getItem(KUNCI_TOLAK)) return }catch(_){}
+  if(teks) document.getElementById('pitaPasangTeks').textContent=teks;
+  pitaPasang.classList.add('tampil');
+}
+document.getElementById('bPitaTutup').addEventListener('click',()=>{
+  pitaPasang.classList.remove('tampil');
+  try{ localStorage.setItem(KUNCI_TOLAK,'1') }catch(_){}
+});
 const mPasang=document.getElementById('mPasang');
 let tawaranPasang=null;
 addEventListener('beforeinstallprompt',e=>{
   e.preventDefault(); tawaranPasang=e;
   mPasang.style.display='';
+  tampilkanPitaPasang();
+});
+document.getElementById('bPitaPasang').addEventListener('click',async ()=>{
+  pitaPasang.classList.remove('tampil');
+  if(tawaranPasang){
+    tawaranPasang.prompt(); tawaranPasang=null; mPasang.style.display='none';
+  }else{
+    /* iOS tidak menyediakan ajakan otomatis — beri petunjuk manualnya. */
+    kabarSingkat('Di Safari: tombol Bagikan → "Tambahkan ke Layar Utama"');
+  }
 });
 mPasang.addEventListener('click',tutupMenu(()=>{
   if(tawaranPasang){ tawaranPasang.prompt(); tawaranPasang=null; mPasang.style.display='none' }
 }));
-addEventListener('appinstalled',()=>{ mPasang.style.display='none'; tawaranPasang=null });
+addEventListener('appinstalled',()=>{
+  mPasang.style.display='none'; tawaranPasang=null;
+  pitaPasang.classList.remove('tampil');
+});
 /* iOS tidak menawarkan pemasangan otomatis; beri petunjuk manualnya */
 const iOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
   (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const terpasang=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 if(iOS && !terpasang && /^https?:$/.test(location.protocol)){
   mPasang.style.display='';
+  tampilkanPitaPasang('Pasang SIMBION: Bagikan → Tambahkan ke Layar Utama');
   mPasang.querySelector('span').textContent='Cara memasang di iPhone';
   mPasang.addEventListener('click',()=>{
     elPeringatan.style.color=C.ok;
@@ -5267,7 +5400,7 @@ ukur(); setModeTampil(1);
 /* Mulai dari papan KOSONG, bukan contoh — kecuali ada pekerjaan yang belum
    selesai dari sesi sebelumnya, yang dipulihkan apa adanya. */
 if(!pulihkanOtomatis()){ M.komponen.length=0; M.kawat.length=0; nomorBerikut=1; pan={x:-30,y:-30}; zoom=1 }
-gambarIns(); isiRecent(); segarkanNamaSimpan();
+gambarIns(); isiRecent(); segarkanNamaSimpan(); segarkanCepat();
 tumpukan.length=0; majuStack.length=0; setRiwayat(); segarkan();
 requestAnimationFrame(bingkai);
 </script>
