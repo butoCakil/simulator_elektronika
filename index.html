@@ -71,6 +71,22 @@
   .cepat button{width:42px;height:42px;padding:0;border-radius:3px;
     background:rgba(14,37,41,.94)}
   .cepat button .ik{width:1.5em;height:1.5em}
+  .cepatW{position:absolute;top:10px;right:10px;z-index:9;display:none;gap:6px}
+  .cepatW.tampil{display:flex}
+  .cepatW button{width:42px;height:42px;padding:0;border-radius:3px;
+    background:rgba(14,37,41,.94)}
+  .cepatW button .ik{width:1.5em;height:1.5em}
+  body.proyektor .cepatW button{width:54px;height:54px}
+  /* Panel nilai ringkas: muncul tepat di bawah bilah cepat, cukup untuk satu
+     nilai utama tanpa perlu membuka panel detail. */
+  .nilaiPop{position:absolute;top:60px;right:10px;z-index:10;display:none;
+    background:var(--panel-up);border:1px solid var(--rule);border-radius:3px;
+    padding:10px 12px;width:min(280px,calc(100vw - 24px));
+    box-shadow:0 12px 28px rgba(0,0,0,.45)}
+  .nilaiPop.tampil{display:block}
+  .nilaiPop .lbl{margin:0 0 6px}
+  .nilaiPop input[type=number],.nilaiPop input[type=text]{width:100%}
+  body.proyektor .nilaiPop{top:76px}
   body.proyektor .cepat button{width:54px;height:54px}
   .pita{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:11;
     background:rgba(14,37,41,.96);border:1px solid var(--ok);border-radius:20px;
@@ -330,8 +346,14 @@
     <button data-c="putar" title="Putar 90°"><svg class="ik" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-8-8"/><path d="M12 1.5V6.5L16 4"/></svg></button>
     <button data-c="cerminH" title="Cermin mendatar"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 8L3 12l5 4z"/><path d="M16 8l5 4-5 4z"/></svg></button>
     <button data-c="cerminV" title="Cermin tegak"><svg class="ik" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M8 8l4-5 4 5z"/><path d="M8 16l4 5 4-5z"/></svg></button>
+    <button data-c="nilai" title="Ubah nilai"><svg class="ik" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.4"/><circle cx="15" cy="16" r="2.4"/></svg></button>
     <button data-c="hapus" title="Hapus" style="color:var(--hot);border-color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
   </div>
+  <div class="cepatW" id="cepatW">
+    <button data-w="belok" title="Ubah arah belokan kawat"><svg class="ik" viewBox="0 0 24 24"><path d="M4 19V9a3 3 0 0 1 3-3h13"/><path d="M16 2.5L20.5 6 16 9.5"/></svg></button>
+    <button data-w="hapus" title="Hapus kawat" style="color:var(--hot);border-color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
+  </div>
+  <div class="nilaiPop" id="nilaiPop"></div>
   <div class="peringatan" id="peringatan"></div>
   <div class="pita" id="pitaBaru">
     <span>Versi baru tersedia<span id="versiBaru"></span></span>
@@ -445,6 +467,11 @@ const keadaan=new Map();
    Nilainya boolean (tertarik atau tidak), bukan besaran kontinu, karena
    inilah satu-satunya komponen yang keadaannya DISKRIT. */
 const keadaanRelay=new Map();
+/* Berapa lama (waktu simulasi) tiap elco tertahan pada tegangan balik.
+   Dideklarasikan DI SINI, bersama peta keadaan lain, karena fungsi gambar
+   elco memakainya — kalau dideklarasikan setelahnya, urutan evaluasi jadi
+   bergantung nasib. */
+const lamaTerbalik=new Map();
 let tSim=0;
 function resetKeadaan(){ keadaan.clear(); keadaanRelay.clear(); keadaanReg.clear(); tSim=0 }
 const ambil=(id,bawaan)=>keadaan.has(id)?keadaan.get(id):bawaan;
@@ -1519,7 +1546,7 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='2.9';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.0';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -2306,7 +2333,11 @@ function gElco(k){
   labelAtas(k,fmtF(k.prop.C));
   /* Elco nyata rusak bila kutubnya terbalik — peringatan ini yang membuat
      komponen ini berbeda secara pedagogis dari kapasitor biasa. */
-  if(terbaca() && v<-1) tks('TERBALIK!',0,22,C.hot,10,'center',2);
+  /* Peringatan hanya untuk terbalik yang BERKELANJUTAN. Elco sebagai kopling
+     sinyal AC memang berayun melewati nol tiap setengah siklus, dan itu
+     lumrah di penguat nyata — memperingatkannya justru menyesatkan. */
+  if(terbaca() && (lamaTerbalik.get(k.id)||0) > 0.05)
+    tks('TERBALIK!',0,22,C.hot,10,'center',2);
   else if(Math.abs(v)>1e-4) labelBawah(k,km(v,2)+' V',C.silk);
 }
 
@@ -2890,6 +2921,15 @@ function gambar(){
       ((hasil&&hasil.gagal)?'   iterasi belum konvergen: '+hasil.gagal+' langkah':'')+
       (jeda?'   — JEDA':''),10,10);
   }
+  /* Nama rangkaian sebagai tanda air di pojok kiri bawah — cukup terbaca
+     untuk tangkapan layar jobsheet, tapi cukup redup agar tidak mengganggu. */
+  if(namaProyek){
+    ctx.font=(12*FP())+'px system-ui, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='bottom';
+    ctx.globalAlpha=0.42; ctx.fillStyle=C.muted;
+    ctx.fillText(namaProyek,10,tinggiCSS-8);
+    ctx.globalAlpha=1;
+  }
 }
 
 /* ==========================================================================
@@ -2943,20 +2983,122 @@ pegangEl.addEventListener('click',()=>bukaSheet(!sheet.classList.contains('buka'
    tampil di dua tempat sekaligus.
    ========================================================================= */
 const elCepat=document.getElementById('cepat');
+const elCepatW=document.getElementById('cepatW');
+const elNilaiPop=document.getElementById('nilaiPop');
+function tutupNilaiPop(){ elNilaiPop.classList.remove('tampil'); elNilaiPop.innerHTML='' }
 function segarkanCepat(){
-  const tampil = !!dipilih && !sheet.classList.contains('buka');
-  elCepat.classList.toggle('tampil',tampil);
+  const sheetBuka=sheet.classList.contains('buka');
+  const adaKomp = !!dipilih && !sheetBuka;
+  const adaKawat = pilihKawat>=0 && !!M.kawat[pilihKawat] && !sheetBuka;
+  elCepat.classList.toggle('tampil',adaKomp);
+  elCepatW.classList.toggle('tampil',adaKawat);
+  if(!adaKomp) tutupNilaiPop();
 }
+
+/* ===== panel nilai ringkas ================================================
+   Menampilkan SATU nilai utama komponen: untuk alat ukur namanya, untuk yang
+   lain medan angka pertamanya. Geseran memakai skala logaritmik bila medan
+   itu memang log — aturan yang sama dengan panel detail, supaya rentang
+   selebar 1 Ω..10 MΩ tetap bisa diatur.
+   ========================================================================= */
+function bukaNilaiPop(){
+  if(!dipilih){ tutupNilaiPop(); return }
+  const def=JENIS[dipilih.jenis]||{};
+  const medan=(def.field||[]);
+  const fTeks=medan.find(f=>f.jenis==='teks');
+  const fAngka=medan.find(f=>f.jenis==='angka');
+  const f=fTeks||fAngka;
+  if(!f){
+    elNilaiPop.innerHTML='<p class="lbl">'+def.nama+'</p>'+
+      '<p class="kosong">Komponen ini tidak punya nilai yang bisa diatur.</p>';
+    elNilaiPop.classList.add('tampil'); return;
+  }
+  elNilaiPop.innerHTML='';
+  const jd=document.createElement('p');
+  jd.className='lbl'; jd.textContent=f.nm+(f.sat?' ('+f.sat+')':'');
+  elNilaiPop.appendChild(jd);
+
+  if(f.jenis==='teks'){
+    const inp=document.createElement('input');
+    inp.type='text'; inp.value=dipilih.prop[f.k]||''; inp.setAttribute('maxlength','14');
+    inp.addEventListener('change',()=>{
+      rekam();
+      dipilih.prop[f.k]=inp.value.trim()||namaBaru(dipilih.jenis);
+      inp.value=dipilih.prop[f.k];
+      sigCtl=''; segarkan(); gambarIns();
+    });
+    elNilaiPop.appendChild(inp);
+    elNilaiPop.classList.add('tampil');
+    setTimeout(()=>{inp.focus();inp.select()},30);
+    return;
+  }
+
+  const inp=document.createElement('input');
+  inp.type='number'; inp.step=f.step; inp.min=f.min; inp.max=f.max;
+  inp.value=dipilih.prop[f.k];
+  const sl=document.createElement('input');
+  sl.type='range';
+  const lo=Math.log10(Math.max(f.min,1e-9)), hi=Math.log10(f.max);
+  const keGeser=v=>Math.round((Math.log10(Math.min(Math.max(v,f.min),f.max))-lo)/(hi-lo)*1000);
+  const dariGeser=g=>{
+    const v=Math.pow(10,lo+(hi-lo)*g/1000);
+    const p=Math.pow(10,Math.floor(Math.log10(v))-1);
+    return Math.max(Math.round(v/p)*p,f.min);
+  };
+  if(f.log){ sl.min=0; sl.max=1000; sl.step=1; sl.value=keGeser(dipilih.prop[f.k]) }
+  else { sl.min=f.min; sl.max=f.max; sl.step=f.step; sl.value=dipilih.prop[f.k] }
+  inp.addEventListener('change',()=>{
+    const n=Math.min(Math.max(parseFloat(inp.value)||0,f.min),f.max);
+    rekam(); dipilih.prop[f.k]=n; inp.value=n;
+    if(f.log) sl.value=keGeser(n); else sl.value=n;
+    segarkan(); gambarIns();
+  });
+  sl.addEventListener('input',()=>{
+    const v=f.log?dariGeser(+sl.value):parseFloat(sl.value);
+    dipilih.prop[f.k]=v; inp.value=v; segarkan();
+  });
+  sl.addEventListener('change',()=>{rekam();gambarIns()});
+  elNilaiPop.append(inp,sl);
+  elNilaiPop.classList.add('tampil');
+}
+elNilaiPop.addEventListener('pointerdown',e=>e.stopPropagation());
+
+/* ---- bilah cepat untuk KAWAT ---- */
+elCepatW.addEventListener('pointerdown',e=>e.stopPropagation());
+elCepatW.querySelectorAll('button[data-w]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const w=M.kawat[pilihKawat]; if(!w) return;
+    rekam();
+    if(b.dataset.w==='hapus'){ M.kawat.splice(pilihKawat,1); pilihWire(-1) }
+    else{
+      /* Membalik arah belokan: siku yang tadinya lewat atas jadi lewat
+         samping, tanpa mengubah kedua ujungnya. */
+      const p=posPinKunci(w.a), q=posPinKunci(w.b);
+      if(p&&q){
+        w.orient = (w.orient==='v') ? 'h' : 'v';
+        w.m = (w.orient==='v') ? q[0] : q[1];
+      }
+    }
+    segarkan(); gambarIns();
+  });
+});
 elCepat.addEventListener('pointerdown',e=>e.stopPropagation());
 elCepat.querySelectorAll('button[data-c]').forEach(b=>{
   b.addEventListener('click',()=>{
     if(!dipilih) return;
-    rekam();
     const c=b.dataset.c;
+    /* 'nilai' hanya membuka panel — bukan perubahan, jadi jangan dicatat
+       ke riwayat urungkan. */
+    if(c!=='nilai') rekam();
     if(c==='putar')   dipilih.rot=(dipilih.rot+1)%4;
     if(c==='cerminH') dipilih.cx=dipilih.cx?0:1;
     /* Cermin tegak = cermin datar + putar 180 derajat; satu penanda cukup. */
     if(c==='cerminV'){ dipilih.cx=dipilih.cx?0:1; dipilih.rot=(dipilih.rot+2)%4 }
+    if(c==='nilai'){
+      /* tombol bekerja sebagai sakelar: tekan lagi untuk menutup */
+      if(elNilaiPop.classList.contains('tampil')) tutupNilaiPop(); else bukaNilaiPop();
+      return;
+    }
     if(c==='hapus'){
       const id=dipilih.id;
       M.kawat=M.kawat.filter(w=>w.a.split(':')[0]!==id && w.b.split(':')[0]!==id);
@@ -3900,9 +4042,11 @@ function lepas(e){
         bukaSheet(false);
         /* sekali ketuk pada alat ukur: layar osiloskop saja, tanpa detail.
            Komponennya tetap terpilih sehingga bisa langsung digeser. */
+        /* Hanya saat Power ON. Ketika sedang merangkai (power mati), layar
+           skop yang terus menyembul justru menghalangi pekerjaan. */
         const kk=tekanUji.k;
-        if(kk.jenis==='probe' ||
-           ((kk.jenis==='volt'||kk.jenis==='ampere')&&kk.prop.skop)) bukaScope(true);
+        if(hidup && (kk.jenis==='probe' ||
+           ((kk.jenis==='volt'||kk.jenis==='ampere')&&kk.prop.skop))) bukaScope(true);
       }
       segarkan();
     }
@@ -4384,7 +4528,10 @@ document.getElementById('mContohCT').addEventListener('click',tutupMenu(()=>{
   [[ac.id+':0',t.id+':0'],[ac.id+':1',t.id+':1'],
    [t.id+':2',br.id+':0'],[t.id+':4',br.id+':1'],[t.id+':3',g.id+':0'],
    [br.id+':2',cp.id+':0'],[cp.id+':1',g.id+':0'],
-   [br.id+':3',cn.id+':0'],[cn.id+':1',g.id+':0'],
+   /* Elco rel NEGATIF dipasang terbalik terhadap yang positif: kutub + (kaki
+      pertama) menghadap massa, kaki kedua ke rel negatif. Inilah cara
+      memasang elco pada rel negatif di rangkaian nyata. */
+   [br.id+':3',cn.id+':1'],[cn.id+':0',g.id+':0'],
    [cp.id+':0',up.id+':0'],[up.id+':1',g.id+':0'],
    [up.id+':2',rp.id+':0'],[rp.id+':1',g.id+':0'],[up.id+':2',pp.id+':0'],
    [cn.id+':0',un.id+':0'],[un.id+':1',g.id+':0'],
@@ -4791,6 +4938,14 @@ let intervalKasar=0, tKasarAkhir=-Infinity;
 const akumKasar=new Map();
 function nolkanRekam(){ intervalKasar=0; tKasarAkhir=-Infinity; akumKasar.clear() }
 
+function pantauElco(dtSim){
+  for(const k of M.komponen){
+    if(k.jenis!=='elco') continue;
+    const v=keadaan.has(k.id)?keadaan.get(k.id):0;
+    if(v<-0.8) lamaTerbalik.set(k.id,(lamaTerbalik.get(k.id)||0)+dtSim);
+    else if(v>-0.2) lamaTerbalik.set(k.id,0);
+  }
+}
 function rekamJejak(){
   if(!hasil||!hasil.ok) return;
   /* probe selalu direkam; voltmeter dan amperemeter hanya bila tombol
@@ -4868,6 +5023,7 @@ function bingkai(t){
   const dt=lalu?Math.min((t-lalu)/1000,.05):0; lalu=t;
   if(hidup&&!jeda&&dt>0){
     hasil=hitung(dt*SKALA[iSkala]);
+    pantauElco(dt*SKALA[iSkala]);
     rekamJejak();
     gambarUkur();
   }
