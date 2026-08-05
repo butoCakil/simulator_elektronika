@@ -1584,9 +1584,9 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='3.2';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.3';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
-let namaProyek='Rangkaian_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+let namaProyek='';   /* diisi saat mulai, lihat namaBawaan() */
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
 let lalu=0;                         /* penanda waktu bingkai sebelumnya */
 let pan={x:-30,y:-30}, zoom=1, hasil=null, cascade=0;
@@ -4290,8 +4290,7 @@ document.getElementById('mKotak').addEventListener('click',tutupMenu(()=>setMode
 document.getElementById('mPas').addEventListener('click',tutupMenu(pas));
 document.getElementById('mContoh').addEventListener('click',tutupMenu(muatContoh));
 document.getElementById('mContohRC').addEventListener('click',tutupMenu(()=>{
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('Pengisian RC');
   
   // Inisialisasi Komponen
   const s   = tambahKomponen('sumber', 80, 260);
@@ -4336,8 +4335,7 @@ document.getElementById('mContohRC').addEventListener('click',tutupMenu(()=>{
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
 document.getElementById('mContohLED').addEventListener('click',tutupMenu(()=>{
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('LED &amp; pembatas arus');
   const s =tambahKomponen('sumber',100,240); s.prop.E=5;
   const r =tambahKomponen('resistor',260,160); r.prop.R=150;
   const d =tambahKomponen('led',440,160);
@@ -4352,8 +4350,7 @@ document.getElementById('mContohLED').addEventListener('click',tutupMenu(()=>{
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
 document.getElementById('mContohPS').addEventListener('click',tutupMenu(()=>{
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('Penyearah jembatan + filter');
   
   // Inisialisasi komponen baru
   const s   = tambahKomponen('sumberac', 100, 280); s.prop.Vp=12; s.prop.f=50;
@@ -4394,8 +4391,7 @@ document.getElementById('mContohPS').addEventListener('click',tutupMenu(()=>{
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
 document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('Transistor sebagai saklar');
   
   // Inisialisasi komponen dengan koordinat dan properti yang sudah direvisi
   const vcc = tambahKomponen('sumber', 760, 240); vcc.prop.E=12;
@@ -4429,8 +4425,7 @@ document.getElementById('mContohSW').addEventListener('click',tutupMenu(()=>{
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
 document.getElementById('mContohCE').addEventListener('click',tutupMenu(()=>{
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('Penguat emitor bersama');
   
   // Inisialisasi Komponen dengan koordinat dan rotasi baru
   const vcc = tambahKomponen('sumber', 580, 220); vcc.prop.E=12;
@@ -4477,8 +4472,28 @@ document.getElementById('mContohCE').addEventListener('click',tutupMenu(()=>{
   
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }));
-function mulaiContoh(){
-  rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+/* Nama bawaan diberi cap waktu sampai DETIK, bukan menit: membuka dua contoh
+   berturut-turut dalam satu menit yang sama tidak boleh menghasilkan nama
+   yang sama. */
+function namaBawaan(){
+  const t=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return 'Rangkaian_'+t.getFullYear()+p(t.getMonth()+1)+p(t.getDate())+
+         '_'+p(t.getHours())+p(t.getMinutes())+p(t.getSeconds());
+}
+/* Dipanggil setiap kali papan berganti isi menjadi rangkaian BARU — contoh
+   bawaan maupun papan kosong. Melepas pegangan berkas adalah bagian yang
+   paling penting: tanpa itu, "Simpan" akan menimpa berkas yang tadi dibuka
+   dengan rangkaian yang sama sekali berbeda. */
+function rangkaianBaru(nama){
+  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  namaProyek=nama||namaBawaan();
+  peganganBerkas=null;
+  pinTertunda=null; pilihKomp(null); pilihWire(-1);
+  if(typeof segarkanNamaSimpan==='function') segarkanNamaSimpan();
+}
+function mulaiContoh(nama){
+  rekam(); rangkaianBaru(nama);
 }
 function selesaiContoh(skala,jendela){
   hidup=true; bPower.setAttribute('aria-pressed','true'); bPower.querySelector('span').textContent='Power aktif';
@@ -4487,7 +4502,7 @@ function selesaiContoh(skala,jendela){
   pinTertunda=null; pilihKomp(null); pas(); resetWaktu();
 }
 document.getElementById('mContohPot').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Pembagi tegangan potensiometer');
   
   // Inisialisasi komponen dengan koordinat baru
   const s  = tambahKomponen('sumber', 120, 300); s.prop.E=12;
@@ -4517,7 +4532,7 @@ document.getElementById('mContohPot').addEventListener('click',tutupMenu(()=>{
   selesaiContoh(0);
 }));
 document.getElementById('mContohTrafo').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Catu daya trafo → jembatan → filter');
   
   // Inisialisasi komponen dengan koordinat baru
   const ac = tambahKomponen('sumberac', 220, 300); ac.prop.Vp=311; ac.prop.f=50;
@@ -4554,7 +4569,7 @@ document.getElementById('mContohTrafo').addEventListener('click',tutupMenu(()=>{
   selesaiContoh(2,3);
 }));
 document.getElementById('mContohOA').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Op-amp penguat membalik');
   
   // Inisialisasi komponen dengan koordinat dan properti baru
   const ac = tambahKomponen('sumberac', 120, 320); ac.prop.Vp=0.5; ac.prop.f=100;
@@ -4598,7 +4613,7 @@ document.getElementById('mContohOA').addEventListener('click',tutupMenu(()=>{
 /* Catu daya simetris: satu trafo CT memberi +5 V dan -5 V sekaligus —
    inilah cara mencatu op-amp di praktikum. */
 document.getElementById('mContohCT').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Catu daya simetris ±5 V (trafo CT)');
   const ac=tambahKomponen('sumberac',100,340); ac.prop.Vp=311.1; ac.prop.f=50;
   const t =tambahKomponen('trafoct',260,340); t.prop.n=12/220;
   const br=tambahKomponen('dioda4',420,340);
@@ -4629,7 +4644,7 @@ document.getElementById('mContohCT').addEventListener('click',tutupMenu(()=>{
 /* Alarm cahaya: LDR menyalakan buzzer lewat transistor. Geser tuas cahaya
    pada LDR untuk menyalakan dan mematikannya. */
 document.getElementById('mContohBz').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Alarm cahaya: LDR + buzzer');
   const v =tambahKomponen('vcc',140,180); v.prop.V=9;
   const ld=tambahKomponen('ldr',140,300); ld.prop.pos=.8; ld.rot=1;
   const r1=tambahKomponen('resistor',140,440); r1.prop.R=10000; r1.rot=1;
@@ -4650,7 +4665,7 @@ document.getElementById('mContohBz').addEventListener('click',tutupMenu(()=>{
 /* Nada ke speaker. Sengaja pada kecepatan 1x, karena hanya di situ bunyi
    yang keluar benar tingginya. */
 document.getElementById('mContohSpk').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Nada ke speaker');
   /* Resistor seri sengaja KECIL: speaker 8 ohm akan tenggelam di belakang
      resistor ratusan ohm, dan yang terdengar tinggal bisikan. */
   const ac=tambahKomponen('sumberac',180,300); ac.prop.Vp=3; ac.prop.f=440;
@@ -4668,7 +4683,7 @@ document.getElementById('mContohSpk').addEventListener('click',tutupMenu(()=>{
 /* Relay: arus kecil dari push button mengendalikan bohlam berarus besar,
    sekaligus memperlihatkan kontak NC yang mati saat relay tertarik. */
 document.getElementById('mContohRy').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Relay: saklar kecil, beban besar');
   const v =tambahKomponen('vcc',140,200); v.prop.V=12;
   const pb=tambahKomponen('pbno',140,320); pb.prop.tutup=0; pb.rot=1;
   const ry=tambahKomponen('relay',300,420);
@@ -4687,7 +4702,7 @@ document.getElementById('mContohRy').addEventListener('click',tutupMenu(()=>{
 /* Empat bentuk gelombang, satu speaker. Ganti bentuknya di panel sumber AC
    dan dengarkan bedanya — sinus halus, kotak kasar, gigi gergaji tajam. */
 document.getElementById('mContohGel').addEventListener('click',tutupMenu(()=>{
-  mulaiContoh();
+  mulaiContoh('Bentuk gelombang ke speaker');
   /* Potensiometer sebagai pengatur kenyaringan. Nilainya harus rendah
      (100 ohm, bukan 1 kilo-ohm) supaya speaker 8 ohm tidak tenggelam. */
   const ac=tambahKomponen('sumberac',180,300); ac.prop.Vp=12; ac.prop.f=220;
@@ -4707,8 +4722,7 @@ document.getElementById('mContohGel').addEventListener('click',tutupMenu(()=>{
 }));
 
 document.getElementById('mBersih').addEventListener('click',tutupMenu(()=>{
-  rekam(); M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
-  pinTertunda=null; pilihKomp(null); segarkan();
+  rekam(); rangkaianBaru(); segarkan(); gambarIns();
 }));
 
 const tirai=document.getElementById('tirai'), paletSheet=document.getElementById('paletSheet');
@@ -4939,8 +4953,7 @@ fBuka.addEventListener('change',()=>{
   fr.readAsText(f);
 });
 function muatContoh(){
-  rekam();
-  M.komponen.length=0; M.kawat.length=0; nomorBerikut=1;
+  rekam(); rangkaianBaru('Seri-paralel DC');
   
   // Inisialisasi Komponen
   const s = tambahKomponen('sumber', 80, 220);
@@ -5399,7 +5412,7 @@ segarkanMenu();
 ukur(); setModeTampil(1);
 /* Mulai dari papan KOSONG, bukan contoh — kecuali ada pekerjaan yang belum
    selesai dari sesi sebelumnya, yang dipulihkan apa adanya. */
-if(!pulihkanOtomatis()){ M.komponen.length=0; M.kawat.length=0; nomorBerikut=1; pan={x:-30,y:-30}; zoom=1 }
+if(!pulihkanOtomatis()){ rangkaianBaru(); pan={x:-30,y:-30}; zoom=1 }
 gambarIns(); isiRecent(); segarkanNamaSimpan(); segarkanCepat();
 tumpukan.length=0; majuStack.length=0; setRiwayat(); segarkan();
 requestAnimationFrame(bingkai);
