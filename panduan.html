@@ -74,6 +74,20 @@
     background:var(--panel-up)}
   .warna{display:inline-block;width:12px;height:12px;border-radius:2px;
     vertical-align:-1px;margin-right:7px}
+  .tbl-ikon td.ikc{width:46px;text-align:center;padding:9px 4px 9px 8px;
+    white-space:nowrap}
+  .tbl-ikon td.nmc{white-space:nowrap;color:#fff;font-weight:600;font-size:14px}
+  .tbl-ikon .ik{width:24px;height:24px;fill:none;stroke:var(--pilih);
+    stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+    vertical-align:middle}
+  .tbl-t{display:inline-block;min-width:26px;padding:2px 6px;border-radius:3px;
+    border:1px solid var(--rule);background:var(--panel-up);color:var(--pilih);
+    font-family:ui-monospace,monospace;font-size:12.5px;text-align:center}
+  @media(max-width:620px){
+    .tbl-ikon td.nmc{white-space:normal}
+    .tbl-ikon td.ikc{width:38px;padding-left:2px}
+    .tbl-ikon .ik{width:21px;height:21px}
+  }
   footer{border-top:1px solid var(--rule);margin-top:50px;padding-top:18px;
     color:var(--muted);font-size:13.5px}
 </style>
@@ -112,6 +126,7 @@ terbakar dan tanpa harus menunggu alat tersedia.</p>
     <li><a href="#berkas">Menyimpan dan membuka</a></li>
     <li><a href="#kelas">Untuk mengajar di kelas</a></li>
     <li><a href="#masalah">Kalau ada masalah</a></li>
+    <li><a href="#tombol">Rujukan semua tombol</a></li>
   </ol>
 </div>
 
@@ -457,6 +472,121 @@ menjelaskan. Berbeda dari Power: rangkaian tetap bertenaga.</p>
       <td>Perbesar zoom, atau renggangkan komponennya. Pada rangkaian padat, sebagian tegangan simpul memang sengaja disembunyikan.</td></tr>
   <tr><td>Ada versi baru</td>
       <td>Pita pemberitahuan muncul sendiri. Ketuk <b>Muat ulang</b> — pekerjaan Anda tidak hilang karena tersimpan otomatis.</td></tr>
+</table>
+
+
+<h2 id="tombol">12. Rujukan semua tombol</h2>
+
+<p>Bagian ini memuat setiap tombol yang ada di SIMBION beserta gambarnya, agar
+mudah dicocokkan dengan yang terlihat di layar.</p>
+
+<h3>Bilah atas</h3>
+<p>Di layar lebar semua tombol ini terlihat. Di layar HP sebagian pindah ke
+dalam menu <span class="tmb">⋯</span> supaya bilahnya tetap satu baris.</p>
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg></td><td class="nmc">Power</td><td>Menyalakan dan mematikan rangkaian. Selama mati tidak ada arus, dan osiloskop berhenti merekam.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg></td><td class="nmc">Jeda / Lanjut</td><td>Membekukan waktu. Rangkaian tetap bertenaga — bedanya dengan Power. Ikonnya berubah menjadi tanda putar saat sedang terjeda.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></td><td class="nmc">Tambah</td><td>Membuka daftar komponen, dikelompokkan menurut jenisnya.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></td><td class="nmc">Reset waktu &amp; muatan</td><td>Mengembalikan waktu ke nol dan mengosongkan muatan semua kapasitor. Rangkaiannya sendiri tidak dihapus.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg></td><td class="nmc">Tampilan</td><td>Empat mode bergantian tiap ketukan: <code>CLR</code> bersih · <code>VAL</code> nilai tegangan &amp; arus · <code>BOX</code> kotak area ketuk · <code>ALL</code> keduanya.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">0,2×</span></td><td class="nmc">Kecepatan</td><td>Tombol bertulisan, bukan bergambar. Menunjukkan kecepatan waktu yang sedang dipakai; diketuk untuk berganti: 1× · 0,2× · 0,05× · 0,01×. Di layar HP tombol ini pindah ke menu <span class="tmb">⋯</span>.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></td><td class="nmc">Paskan tampilan</td><td>Mengatur zoom dan geseran agar seluruh rangkaian muat di layar.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M5.5 14c2-6 4 6 6 0s3-4 4 2"/></svg></td><td class="nmc">Skop / Tutup</td><td>Membuka layar osiloskop. Saat terbuka, ikonnya berubah menjadi tanda silang dan tulisannya menjadi <b>Tutup</b>.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg></td><td class="nmc">Urungkan</td><td>Membatalkan perubahan terakhir. Meredup bila tidak ada yang bisa dibatalkan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg></td><td class="nmc">Ulangi</td><td>Mengembalikan perubahan yang baru saja dibatalkan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:4.6"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg></td><td class="nmc">Menu lainnya</td><td>Membuka menu: contoh rangkaian, berkas, mode proyektor, panduan.</td></tr>
+</table>
+
+<h3>Bilah cepat — saat komponen dipilih</h3>
+<p>Muncul di pojok kanan atas kanvas begitu sebuah komponen diketuk. Bilah ini
+menghilang saat panel rincian di bawah dibuka, agar fungsi yang sama tidak
+tampil di dua tempat.</p>
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-8-8"/><path d="M12 1.5V6.5L16 4"/></svg></td><td class="nmc">Putar</td><td>Memutar komponen 90° searah jarum jam setiap ketukan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 8L3 12l5 4z"/><path d="M16 8l5 4-5 4z"/></svg></td><td class="nmc">Cermin mendatar</td><td>Membalik komponen kiri–kanan. Dipakai misalnya agar dioda atau elco menghadap sebaliknya.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M8 8l4-5 4 5z"/><path d="M8 16l4 5 4-5z"/></svg></td><td class="nmc">Cermin tegak</td><td>Membalik komponen atas–bawah.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.4"/><circle cx="15" cy="16" r="2.4"/></svg></td><td class="nmc">Nilai</td><td>Membuka pengaturan ringkas: semua nilai komponen itu, tanpa perlu membuka panel bawah.</td></tr>
+  <tr><td class="ikc"><svg class="ik" style="color:#C4453B" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></td><td class="nmc">Hapus</td><td>Menghapus komponen beserta semua kawat yang menempel padanya.</td></tr>
+</table>
+
+<h3>Bilah cepat — saat kawat dipilih</h3>
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 19V9a3 3 0 0 1 3-3h13"/><path d="M16 2.5L20.5 6 16 9.5"/></svg></td><td class="nmc">Ubah belokan</td><td>Memindahkan siku kawat — dari lewat samping menjadi lewat atas, dan sebaliknya.</td></tr>
+  <tr><td class="ikc"><svg class="ik" style="color:#C4453B" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></td><td class="nmc">Hapus kawat</td><td>Menghapus kawat yang sedang dipilih.</td></tr>
+</table>
+
+<h3>Bilah cepat — saat tidak ada yang dipilih</h3>
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></td><td class="nmc">Paskan tampilan</td><td>Hanya muncul di layar HP saat tidak ada yang dipilih, karena di HP tombol Paskan tidak muat di bilah atas.</td></tr>
+</table>
+
+<h3>Menu <span class="tmb">⋯</span></h3>
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 18v2h16v-2"/></svg></td><td class="nmc">Pasang aplikasi</td><td>Memasang SIMBION sebagai aplikasi. Hanya muncul bila peramban mendukung dan belum terpasang.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg></td><td class="nmc">Waktu</td><td>Jeda dan lanjut, sama dengan tombol Jeda. Keadaannya tertulis di kanan: <b>BERJALAN</b> atau <b>TERJEDA</b>.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg></td><td class="nmc">Urungkan</td><td>Sama dengan tombol ↶ di bilah atas.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg></td><td class="nmc">Ulangi</td><td>Sama dengan tombol ↷ di bilah atas.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg></td><td class="nmc">Kecepatan</td><td>Memilih kecepatan waktu: 1× · 0,2× · 0,05× · 0,01×. Nilai yang sedang dipakai tertulis di kanan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg></td><td class="nmc">Reset waktu &amp; muatan</td><td>Sama dengan tombol reset di bilah atas.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg></td><td class="nmc">Label tegangan &amp; arus</td><td>Menyalakan atau mematikan penampilan angka di kanvas.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24" style="stroke-dasharray:3 2.5"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg></td><td class="nmc">Tampilkan kotak area klik</td><td>Menampilkan kotak daerah sentuh tiap komponen. Berguna bila komponen terasa sulit diketuk.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></td><td class="nmc">Paskan tampilan</td><td>Sama dengan tombol paskan di bilah atas.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg></td><td class="nmc">Mode proyektor</td><td>Memperbesar semua huruf dan menebalkan semua garis 1,5× tanpa mengubah ukuran rangkaian. Disembunyikan di layar HP.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 8h7M9 12h5"/></svg></td><td class="nmc">Panduan penggunaan</td><td>Membuka halaman yang sedang Anda baca ini.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5h7l2 2h7v12H4z"/></svg></td><td class="nmc">Contoh rangkaian</td><td>Membuka daftar 14 contoh siap pakai.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v3h16v-3"/></svg></td><td class="nmc">Buka berkas…</td><td>Membuka berkas <code>.sbn</code> dari perangkat.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></td><td class="nmc">Berkas terakhir</td><td>Delapan rangkaian yang terakhir dibuka atau disimpan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg></td><td class="nmc">Simpan</td><td>Memperbarui berkas yang sedang dibuka. Nama berkasnya tertulis di kanan.</td></tr>
+  <tr><td class="ikc"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/><path d="M19 3v5M21.5 5.5h-5"/></svg></td><td class="nmc">Simpan sebagai…</td><td>Menyimpan ke berkas baru, dengan pilihan nama dan folder.</td></tr>
+  <tr><td class="ikc"><svg class="ik" style="color:#C4453B" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></td><td class="nmc">Kosongkan papan</td><td>Menghapus seluruh isi papan dan memulai rangkaian baru dengan nama baru.</td></tr>
+</table>
+
+<h3>Pengatur osiloskop</h3>
+<p>Tombol-tombol ini bertulisan, bukan bergambar. Letaknya di baris tab di
+bawah layar osiloskop.</p>
+
+<table class="tbl-ikon">
+  <tr><th></th><th>Tombol</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><span class="tbl-t">P1</span></td><td class="nmc">Tab kanal</td>
+      <td>Membuka pengaturan kanal itu: V/div, posisi, dan kopling. Ketuk lagi untuk menutup. Namanya mengikuti nama alat ukurnya.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">T</span></td><td class="nmc">Tab waktu</td>
+      <td>Membuka pengaturan Time/div dan geser waktu.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">−</span> <span class="tbl-t">+</span></td><td class="nmc">V/div</td>
+      <td>Skala tegangan tiap kotak. Perbesar bila gelombang terlalu kecil, perkecil bila terpotong di atas atau bawah.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">▼</span> <span class="tbl-t">▲</span></td><td class="nmc">Posisi</td>
+      <td>Menggeser jejak naik-turun. <b>Bisa ditahan</b> — makin lama ditahan makin cepat bergerak.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">DC</span></td><td class="nmc">Kopling</td>
+      <td>DC menampilkan tumpuan searahnya. AC membuang tumpuan itu, sehingga riak kecil di atas tegangan besar bisa dilihat jelas.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">◀</span> <span class="tbl-t">▶</span></td><td class="nmc">Time/div</td>
+      <td>Skala waktu tiap kotak, dari 5 detik sampai 100 µs.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">NOL</span></td><td class="nmc">Kembali ke terkini</td>
+      <td>Setelah menggeser waktu ke belakang, tombol ini kembali ke sinyal yang sedang berjalan.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">AUTO</span></td><td class="nmc">Skala otomatis</td>
+      <td>Mengatur ulang skala dan posisi semua kanal. Tombol penyelamat kalau jejak hilang entah ke mana.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">PICU</span></td><td class="nmc">Picu</td>
+      <td>Membuat gelombang berkala berdiri diam, tidak berlari ke samping. Sebaiknya selalu menyala.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">⌄</span></td><td class="nmc">Tutup panel</td>
+      <td>Menutup panel pengaturan yang sedang terbuka — bukan menutup osiloskopnya.</td></tr>
+</table>
+
+<h3>Tombol di kanvas</h3>
+<p>Beberapa komponen punya tombol kecil biru yang menempel pada simbolnya
+sendiri, bukan di bilah:</p>
+<table class="tbl-ikon">
+  <tr><th></th><th>Komponen</th><th>Fungsinya</th></tr>
+  <tr><td class="ikc"><span class="tbl-t">−</span> <span class="tbl-t">+</span></td><td class="nmc">Potensiometer</td>
+      <td>Memutar kenop turun dan naik, 5% tiap ketukan. Kedudukannya tertulis dalam persen.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">−</span> <span class="tbl-t">+</span></td><td class="nmc">LDR, Fotodioda</td>
+      <td>Menambah dan mengurangi tingkat cahaya, seperti menyorotkan senter.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">|</span></td><td class="nmc">Saklar, SPDT, DPDT</td>
+      <td>Membuka dan menutup saklar. Cukup diketuk sekali.</td></tr>
+  <tr><td class="ikc"><span class="tbl-t">▭</span></td><td class="nmc">Push Button</td>
+      <td><b>Ditekan dan ditahan</b> — kontak kembali begitu jari diangkat.</td></tr>
 </table>
 
 <footer>
