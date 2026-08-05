@@ -6,7 +6,7 @@
    NAIKKAN nomor VERSI setiap kali index.html diubah, agar peramban tahu ada
    pembaruan dan simpanan lama dibersihkan.
    ========================================================================== */
-const VERSI = 'simbion-v3.3';
+const VERSI = 'simbion-v3.4';
 const BERKAS = [
   './',
   './index.html',

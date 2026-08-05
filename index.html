@@ -1,4 +1,19 @@
 <!DOCTYPE html>
+<!--
+  ============================================================================
+  SIMBION — Simulasi Lab Interaktif Elektronika
+  Hak Cipta (c) 2026 Benny. Seluruh hak dilindungi.
+  https://bion.simbiot.id
+
+  Gratis untuk pembelajaran dan pengajaran.
+  DILARANG tanpa izin tertulis: menyalin atau mengubah kode, menyebarkan
+  ulang atau menghosting salinannya di alamat lain, memakainya secara
+  komersial, atau menghapus keterangan hak cipta ini.
+
+  Selengkapnya: lihat berkas LICENSE.
+  Permintaan izin: bennysurahman@gmail.com
+  ============================================================================
+-->
 <html lang="id">
 <head>
 <meta charset="utf-8">
@@ -302,10 +317,11 @@
     <button id="mJeda2"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg><span>Waktu</span><span id="nJeda" style="margin-left:auto;color:var(--pilih)"></span></button>
     <button id="mUndo2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9h9a5 5 0 0 1 0 10H8"/><path d="M8 4.5L3.5 9 8 13.5"/></svg><span>Urungkan</span></button>
     <button id="mRedo2"><svg class="ik" viewBox="0 0 24 24"><path d="M20 9h-9a5 5 0 0 0 0 10h5"/><path d="M16 4.5L20.5 9 16 13.5"/></svg><span>Ulangi</span></button>
-    <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Reset waktu &amp; muatan</span></button>
     <button id="mSkalaBuka"><svg class="ik" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg><span>Kecepatan</span><span id="mSkalaNilai" style="margin-left:auto;color:var(--pilih)"></span></button>
     <div class="submenu" id="subSkala"></div>
+    <button id="mReset2"><svg class="ik" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 8-8"/><path d="M12 1.5V6.5L8 4"/></svg><span>Reset waktu &amp; muatan</span></button>
     <button id="mLabel"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h13"/></svg><span>Label tegangan &amp; arus</span><span id="nLabel" style="margin-left:auto;color:var(--pilih)"></span></button>
+    <button id="mPanduan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 8h7M9 12h5"/></svg>Panduan penggunaan</button>
     <button id="mProyektor"><svg class="ik" viewBox="0 0 24 24"><path d="M3 5h18v11H3z"/><path d="M8 19h8"/><path d="M12 16v3"/></svg><span>Mode proyektor</span><span id="nProy" style="margin-left:auto;color:var(--pilih)"></span></button>
     <button id="mKotak"><svg class="ik" viewBox="0 0 24 24" style="stroke-dasharray:3 2.5"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg><span>Tampilkan kotak area klik</span><span id="nKotak" style="margin-left:auto;color:var(--pilih)"></span></button>
     <button id="mPas"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Paskan tampilan</button>
@@ -332,7 +348,6 @@
     <div class="submenu" id="subRecent"></div>
     <button id="mSimpan"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/></svg><span>Simpan</span><span id="mSimpanNama" style="margin-left:auto;color:var(--muted);font-size:10px"></span></button>
     <button id="mSimpanSbg"><svg class="ik" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v3h16v-3"/><path d="M19 3v5M21.5 5.5h-5"/></svg>Simpan sebagai…</button>
-    <button id="mPanduan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 8h7M9 12h5"/></svg>Panduan penggunaan</button>
     <hr>
     <button id="mBersih" style="color:var(--hot)"><svg class="ik" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>Kosongkan papan</button>
   </div>
@@ -1584,7 +1599,8 @@ let modeTampil=1;
 const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
-const VERSI_APP='3.3';     /* naikkan bersama nomor VERSI di sw.js */
+const PENCIPTA='Benny Surahman';
+const VERSI_APP='3.4';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 let namaProyek='';   /* diisi saat mulai, lihat namaBawaan() */
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -3232,7 +3248,15 @@ function gambarIns(){
       '<i style="display:inline-block;width:13px;height:3px;background:'+C.ok+
         ';vertical-align:middle;margin-right:7px"></i>alat ukur<br>'+
       '<i style="display:inline-block;width:13px;height:3px;background:'+C.pilih+
-        ';vertical-align:middle;margin-right:7px"></i>pilihan &amp; kendali</p>';
+        ';vertical-align:middle;margin-right:7px"></i>pilihan &amp; kendali</p>'+
+      /* Keterangan hak cipta ikut terbawa ke mana pun aplikasi ini dipasang,
+         termasuk ke perangkat siswa yang memakainya luring. */
+      '<p class="lbl" style="margin:14px 0 5px">Tentang</p>'+
+      '<p class="kosong">'+APLIKASI+' '+VERSI_APP+' — Simulasi Lab Interaktif '+
+      'Elektronika.<br>© 2026 '+PENCIPTA+'. Gratis untuk pembelajaran; '+
+      'penyebaran ulang dan pemakaian komersial memerlukan izin.<br>'+
+      '<a href="panduan.html" target="_blank" rel="noopener" '+
+      'style="color:var(--pilih)">Panduan penggunaan</a></p>';
     const inNm=document.getElementById('inNamaProyek');
     if(inNm) inNm.addEventListener('change',()=>{
       namaProyek=inNm.value.trim()||namaProyek; inNm.value=namaProyek;
@@ -5407,7 +5431,12 @@ else setInterval(()=>{
   if(Math.abs(r.width-lebarCSS)>.5||Math.abs(r.height-tinggiCSS)>.5) ukur();
 },300);
 
-document.getElementById('versiApp').textContent='SIMBION '+VERSI_APP;
+{
+  const elV=document.getElementById('versiApp');
+  elV.textContent=APLIKASI+' '+VERSI_APP;
+  elV.title=APLIKASI+' '+VERSI_APP+' — © 2026 '+PENCIPTA+
+    '. Gratis untuk pembelajaran; penyebaran ulang memerlukan izin.';
+}
 segarkanMenu();
 ukur(); setModeTampil(1);
 /* Mulai dari papan KOSONG, bukan contoh — kecuali ada pekerjaan yang belum
