@@ -21,30 +21,6 @@ ikon/                    ikon aplikasi (192, 512, maskable, iOS, favicon)
 
 ---
 
-## Menerbitkan lewat GitHub Pages
-
-1. Buat repositori baru, misalnya `simbion`.
-2. Salin **seluruh isi folder ini ke akar repositori** (bukan ke dalam
-   subfolder), lalu unggah.
-3. Di repositori: **Settings → Pages**. Bagian *Source* pilih
-   `Deploy from a branch`, cabang `main`, folder `/ (root)`. Simpan.
-4. Masih di halaman itu, isi *Custom domain* dengan `bion.simbiot.id`
-   dan centang **Enforce HTTPS** setelah sertifikatnya terbit
-   (biasanya beberapa menit sampai satu jam).
-5. Di pengelola DNS `simbiot.id`, tambahkan satu rekaman:
-
-   | Tipe | Nama | Nilai |
-   |---|---|---|
-   | CNAME | `bion` | `NAMA-AKUN-GITHUB.github.io` |
-
-   Ganti `NAMA-AKUN-GITHUB` dengan nama akun Anda. Berkas `CNAME` di paket ini
-   sudah berisi `bion.simbiot.id`, jadi langkah 4 dan 5 saling melengkapi.
-
-HTTPS itu **wajib**, bukan pilihan: service worker tidak berjalan tanpa HTTPS,
-dan tanpa service worker aplikasi tidak bisa dipasang maupun dipakai luring.
-
----
-
 ## Cara memakai di kelas
 
 ### Guru — PC untuk proyektor (Windows, luring)
@@ -81,21 +57,6 @@ sekali. Sesudah itu aplikasinya tersimpan di perangkat dan luring seterusnya.
 
 ---
 
-## Menerbitkan pembaruan
-
-Setiap kali `index.html` diubah:
-
-1. **Naikkan nomor versi di `sw.js`** — baris `const VERSI = 'simbion-v1';`
-   menjadi `'simbion-v2'`, dan seterusnya.
-2. Unggah ulang.
-
-Tanpa langkah 1, peramban tidak tahu ada pembaruan dan pengguna akan tetap
-memakai versi lama dari simpanannya. Kalau nomornya dinaikkan, aplikasi yang
-sudah terpasang akan menampilkan pita **"Versi baru SIMBION tersedia"** dengan
-tombol muat ulang.
-
----
-
 ## Berkas rangkaian
 
 Rangkaian disimpan sebagai JSON. Nama berkas mengikuti **Nama rangkaian** yang
@@ -121,20 +82,3 @@ Di `index.html`, dua tetapan berdekatan:
 - `GESER_MAKS` (40 divisi) — jangkauan peluncur geser waktu. Ini yang
   menentukan kehalusan **peluncur**: jangkauan dibagi lebarnya dalam piksel.
   Makin kecil, makin halus, tetapi makin pendek jangkauan ke belakang.
-
----
-
-## Yang belum diputuskan
-
-**Lisensi.** Paket ini belum memuat berkas lisensi, dan itu keputusan yang harus
-diambil pemiliknya, bukan ditebak. Selama belum ada berkas lisensi, secara
-bawaan hak ciptanya tertutup — orang lain tidak berhak menyebarkan ulang atau
-memodifikasi. Kalau tujuannya agar guru lain bisa memakai dan mengubah,
-tambahkan berkas `LICENSE` berisi lisensi pilihan Anda (MIT untuk sebebas
-mungkin, GPLv3 agar turunannya tetap terbuka, CC BY-NC-SA untuk pendidikan
-non-komersial).
-
-**Toko aplikasi.** Microsoft Store menerima PWA dan pendaftaran developer
-individu kini tanpa biaya. Google Play memerlukan pembungkus (TWA atau
-Capacitor), biaya $25 sekali, dan untuk akun pribadi baru ada syarat uji
-tertutup 12 penguji selama 14 hari — akun organisasi dibebaskan dari syarat itu.
