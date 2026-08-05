@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panduan — SIMBION</title>
+<meta name="description" content="Panduan lengkap SIMBION, simulator skema elektronika untuk pembelajaran.">
+<meta name="theme-color" content="#14343A">
+<link rel="icon" type="image/png" sizes="64x64" href="ikon/favicon-64.png">
+<link rel="apple-touch-icon" href="ikon/apple-touch-icon-180.png">
+<style>
+  :root{
+    --panel:#14343A; --panel-dark:#0E2529; --panel-up:#1A4048;
+    --rule:#1F4A50; --silk:#E8E2D0; --muted:#7FA0A3;
+    --copper:#B87333; --charge:#E9B949; --hot:#C4453B; --ok:#63A48C;
+    --pilih:#86B6DE;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--panel-dark);color:var(--silk);
+    font:16px/1.75 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .bung{max-width:860px;margin:0 auto;padding:0 20px 100px}
+
+  header{background:var(--panel);border-bottom:1px solid var(--rule);
+    padding:26px 20px 22px;margin-bottom:26px}
+  header .bung{padding-bottom:0}
+  h1{margin:0 0 6px;font-size:26px;letter-spacing:.01em}
+  header p{margin:0;color:var(--muted);font-size:14.5px}
+  .kembali{display:inline-flex;align-items:center;gap:7px;margin-bottom:16px;
+    color:var(--pilih);text-decoration:none;font-size:14px}
+  .kembali:hover{text-decoration:underline}
+
+  h2{margin:44px 0 12px;font-size:20px;color:var(--silk);
+    padding-bottom:8px;border-bottom:1px solid var(--rule);scroll-margin-top:16px}
+  h3{margin:26px 0 8px;font-size:16.5px;color:var(--pilih)}
+  p{margin:0 0 13px}
+  ul,ol{margin:0 0 13px;padding-left:22px}
+  li{margin:0 0 7px}
+  a{color:var(--pilih)}
+  b{color:#fff;font-weight:600}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13.5px;background:var(--panel);border:1px solid var(--rule);
+    border-radius:3px;padding:1px 6px;color:var(--charge)}
+
+  .isi{background:var(--panel);border:1px solid var(--rule);border-radius:4px;
+    padding:16px 20px;margin-bottom:8px}
+  .isi ol{margin:0;padding-left:20px;columns:2;column-gap:26px}
+  .isi li{margin:0 0 5px;break-inside:avoid}
+  @media(max-width:620px){ .isi ol{columns:1} }
+
+  table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);
+    vertical-align:top}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.09em;font-weight:600}
+  td:first-child{white-space:nowrap;color:#fff}
+  @media(max-width:620px){
+    td:first-child{white-space:normal}
+    table{font-size:14px}
+    th,td{padding:8px 6px}
+  }
+
+  .kotak{border-left:3px solid var(--pilih);background:var(--panel);
+    padding:13px 16px;margin:0 0 16px;border-radius:0 3px 3px 0}
+  .kotak.awas{border-left-color:var(--hot)}
+  .kotak.baik{border-left-color:var(--ok)}
+  .kotak p:last-child{margin-bottom:0}
+  .kotak .jd{display:block;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.09em;color:var(--muted);margin-bottom:5px}
+
+  .tmb{display:inline-block;border:1px solid var(--rule);border-radius:3px;
+    padding:1px 8px;font-size:13px;color:var(--pilih);white-space:nowrap;
+    background:var(--panel-up)}
+  .warna{display:inline-block;width:12px;height:12px;border-radius:2px;
+    vertical-align:-1px;margin-right:7px}
+  footer{border-top:1px solid var(--rule);margin-top:50px;padding-top:18px;
+    color:var(--muted);font-size:13.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bung">
+    <h1>Panduan SIMBION</h1>
+    <p>Simulasi Lab Interaktif Elektronika — untuk guru dan siswa</p>
+  </div>
+</header>
+
+<div class="bung">
+
+<a class="kembali" href="index.html">‹ Kembali ke aplikasi</a>
+
+<p>SIMBION adalah papan percobaan elektronika di layar. Anda menyusun rangkaian
+seperti di atas meja praktik, lalu menyalakannya dan melihat arus mengalir,
+lampu menyala, dan bentuk gelombang di osiloskop — tanpa risiko komponen
+terbakar dan tanpa harus menunggu alat tersedia.</p>
+
+<p>Panduan ini ditulis untuk pemula. Kalau Anda hanya punya lima menit, baca
+<a href="#mulai">Mulai dalam 5 menit</a> saja; sisanya bisa dibaca sambil jalan.</p>
+
+<div class="isi">
+  <ol>
+    <li><a href="#mulai">Mulai dalam 5 menit</a></li>
+    <li><a href="#pasang">Memasang di HP dan PC</a></li>
+    <li><a href="#layar">Mengenal layar</a></li>
+    <li><a href="#menyusun">Menyusun rangkaian</a></li>
+    <li><a href="#nilai">Mengubah nilai komponen</a></li>
+    <li><a href="#membaca">Membaca hasil di kanvas</a></li>
+    <li><a href="#osiloskop">Memakai osiloskop</a></li>
+    <li><a href="#komponen">Daftar komponen</a></li>
+    <li><a href="#berkas">Menyimpan dan membuka</a></li>
+    <li><a href="#kelas">Untuk mengajar di kelas</a></li>
+    <li><a href="#masalah">Kalau ada masalah</a></li>
+  </ol>
+</div>
+
+<h2 id="mulai">1. Mulai dalam 5 menit</h2>
+
+<p>Cara tercepat memahami SIMBION adalah membuka rangkaian yang sudah jadi:</p>
+
+<ol>
+  <li>Ketuk tombol <span class="tmb">⋯</span> di kanan atas.</li>
+  <li>Pilih <b>Contoh rangkaian</b>, lalu <b>seri–paralel DC</b>.</li>
+  <li>Rangkaian muncul dan langsung menyala. Titik-titik emas yang bergerak di
+      sepanjang kawat adalah <b>arus</b> — makin cepat berarti makin besar.</li>
+  <li>Ketuk resistor mana saja. Muncul empat tombol di kanan atas kanvas.</li>
+  <li>Ketuk tombol <b>nilai</b>, lalu geser pengaturnya. Perhatikan arus
+      berubah seketika.</li>
+</ol>
+
+<p>Sudah. Itu inti SIMBION: susun, nyalakan, ubah, amati.</p>
+
+<div class="kotak baik">
+  <span class="jd">Coba ini</span>
+  <p>Pada contoh yang sama, besarkan satu resistor sampai maksimum. Arus di
+  cabang itu hampir berhenti, sementara cabang lain justru bertambah. Inilah
+  hukum pembagi arus yang biasanya hanya dilihat sebagai rumus.</p>
+</div>
+
+<h2 id="pasang">2. Memasang di HP dan PC</h2>
+
+<p>SIMBION bisa dipakai langsung di peramban tanpa dipasang. Tetapi kalau
+dipasang, ia punya ikon sendiri, terbuka layar penuh, dan <b>berjalan tanpa
+internet</b>.</p>
+
+<table>
+  <tr><th>Perangkat</th><th>Cara memasang</th></tr>
+  <tr><td>Android</td>
+      <td>Buka dengan Chrome, lalu ketuk <b>Pasang</b> pada pita yang muncul.
+          Atau menu Chrome (⋮) → <b>Instal aplikasi</b>.</td></tr>
+  <tr><td>Windows</td>
+      <td>Buka dengan Chrome atau Edge, klik ikon pasang di ujung kanan bilah
+          alamat. Atau ⋯ → <b>Pasang aplikasi</b> di dalam SIMBION.</td></tr>
+  <tr><td>iPhone / iPad</td>
+      <td>Harus lewat <b>Safari</b>: tombol Bagikan → <b>Tambahkan ke Layar
+          Utama</b>. Safari tidak menyediakan tombol pasang otomatis.</td></tr>
+</table>
+
+<div class="kotak">
+  <span class="jd">Yang perlu diberitahukan ke siswa</span>
+  <p><b>Kunjungan pertama butuh internet satu kali.</b> Sesudah itu SIMBION
+  tersimpan di perangkat dan bisa dibuka kapan saja tanpa kuota — termasuk di
+  ruang praktik yang tidak ada Wi-Fi.</p>
+</div>
+
+<h2 id="layar">3. Mengenal layar</h2>
+
+<h3>Bilah atas</h3>
+<table>
+  <tr><th>Tombol</th><th>Gunanya</th></tr>
+  <tr><td>Power</td><td>Menyalakan dan mematikan rangkaian. Selama mati, tidak ada arus dan tidak ada perekaman.</td></tr>
+  <tr><td>Tambah</td><td>Membuka daftar komponen.</td></tr>
+  <tr><td>Jeda</td><td>Membekukan waktu. Berbeda dari Power: rangkaian tetap bertenaga, hanya waktunya berhenti — berguna untuk mengamati satu saat tertentu.</td></tr>
+  <tr><td>Skop</td><td>Membuka layar osiloskop. Saat terbuka, tombol ini berubah menjadi <b>Tutup</b>.</td></tr>
+  <tr><td>↶ ↷</td><td>Urungkan dan ulangi.</td></tr>
+  <tr><td>Paskan tampilan</td><td>Menyesuaikan zoom agar seluruh rangkaian terlihat. Di HP tombol ini muncul di kanan atas kanvas saat tidak ada yang dipilih.</td></tr>
+  <tr><td>Tampilan</td><td>Empat mode bergantian: <code>CLR</code> bersih, <code>VAL</code> menampilkan nilai tegangan &amp; arus, <code>BOX</code> menampilkan kotak area ketuk, <code>ALL</code> keduanya.</td></tr>
+  <tr><td>Kecepatan</td><td>1× waktu nyata, atau diperlambat 0,2× / 0,05× / 0,01× untuk melihat kejadian cepat.</td></tr>
+  <tr><td>⋯</td><td>Menu: contoh rangkaian, berkas, mode proyektor, panduan ini.</td></tr>
+</table>
+
+<p>Di layar HP yang sempit, sebagian tombol itu pindah ke dalam menu <span class="tmb">⋯</span>
+supaya bilahnya tetap satu baris.</p>
+
+<h3>Panel bawah</h3>
+<p>Batang tipis di bawah layar bisa ditarik ke atas. Isinya rincian komponen
+yang sedang dipilih, atau — kalau tidak ada yang dipilih — <b>nama rangkaian</b>
+dan keterangan arti warna. Nama rangkaian juga tampil samar di pojok kiri
+bawah kanvas.</p>
+
+<h2 id="menyusun">4. Menyusun rangkaian</h2>
+
+<h3>Menambah komponen</h3>
+<p>Ketuk <b>Tambah</b>, pilih dari salah satu kelompok. Komponen muncul di
+tengah kanvas dalam keadaan terpilih, siap digeser.</p>
+
+<h3>Menggeser, memilih, membuka rincian</h3>
+<table>
+  <tr><th>Perbuatan</th><th>Hasilnya</th></tr>
+  <tr><td>Ketuk sekali</td><td>Memilih komponen. Muncul pegangan <b>①</b> <b>②</b> di titik kakinya, dan bilah tombol cepat di kanan atas.</td></tr>
+  <tr><td>Ketuk dua kali</td><td>Membuka panel rincian di bawah, dengan semua pengaturan.</td></tr>
+  <tr><td>Tahan lalu geser</td><td>Memindahkan komponen.</td></tr>
+  <tr><td>Geser di area kosong</td><td>Menggeser seluruh papan.</td></tr>
+  <tr><td>Cubit dua jari</td><td>Memperbesar dan memperkecil.</td></tr>
+</table>
+
+<h3>Menyambung kawat</h3>
+<ol>
+  <li>Ketuk komponen agar terpilih — pegangan <b>①</b> dan <b>②</b> muncul di kakinya.</li>
+  <li>Tarik dari salah satu pegangan itu ke kaki komponen lain.</li>
+  <li>Lepaskan. Kawat tersambung dan otomatis mencari jalur yang tidak melintasi komponen lain.</li>
+</ol>
+
+<p>Untuk <b>mencabangkan</b> kawat: saat sedang menarik kawat, ketuk kawat yang
+sudah ada. SIMBION membuat titik cabang di situ.</p>
+
+<p>Ketuk sebuah kawat untuk memilihnya — muncul dua tombol: mengubah arah
+belokan, dan menghapus kawat.</p>
+
+<div class="kotak awas">
+  <span class="jd">Sering terlewat</span>
+  <p>Setiap rangkaian <b>wajib punya Massa (GND)</b>. Tanpa itu simulasi tidak
+  bisa dihitung, karena tidak ada titik acuan 0 volt. Kalau rangkaian tidak
+  mau jalan, ini yang pertama diperiksa.</p>
+</div>
+
+<h3>Bilah tombol cepat</h3>
+<p>Muncul di kanan atas kanvas begitu ada yang dipilih:</p>
+<table>
+  <tr><th>Tombol</th><th>Gunanya</th></tr>
+  <tr><td>Putar</td><td>Memutar komponen 90° setiap ketukan.</td></tr>
+  <tr><td>Cermin ⇄</td><td>Membalik arah mendatar — misalnya agar dioda menghadap sebaliknya.</td></tr>
+  <tr><td>Cermin ⇅</td><td>Membalik arah tegak.</td></tr>
+  <tr><td>Nilai</td><td>Membuka pengaturan ringkas tanpa perlu membuka panel bawah.</td></tr>
+  <tr><td>Hapus</td><td>Menghapus komponen beserta kawat yang menempel padanya.</td></tr>
+</table>
+
+<h2 id="nilai">5. Mengubah nilai komponen</h2>
+
+<p>Ada dua jalan: tombol <b>nilai</b> di bilah cepat (ringkas), atau ketuk dua
+kali untuk panel penuh. Keduanya memberi pengaturan yang sama.</p>
+
+<p>Setiap nilai bisa diatur dengan tiga cara:</p>
+<ul>
+  <li><b>Geseran</b> — cepat, untuk mencari-cari nilai sambil melihat akibatnya.</li>
+  <li><b>Kotak angka</b> — untuk nilai persis.</li>
+  <li><b>Daftar nilai pasaran</b> — hanya berisi nilai yang benar-benar dijual
+      di toko (1; 1,2; 1,5; 1,8; 2,2; 2,7; 3,3; 3,9; 4,7; 5,6; 6,8; 8,2 dan
+      kelipatan sepuluhnya).</li>
+</ul>
+
+<div class="kotak baik">
+  <span class="jd">Kenapa daftar pasaran penting</span>
+  <p>Siswa sering menghitung dan mendapat 3.147 Ω, lalu bingung karena resistor
+  itu tidak ada di toko. Daftar ini melatih mereka memilih nilai terdekat yang
+  <b>benar-benar ada</b> — kebiasaan yang dipakai di pekerjaan nyata.</p>
+</div>
+
+<p>Geseran untuk resistor dan kapasitor bersifat <b>logaritmik</b>: separuh
+pertama mencakup ohm sampai kilo-ohm, separuh berikutnya sampai mega-ohm.
+Kalau linear, 99% geseran akan habis di nilai besar saja.</p>
+
+<h3>Nama alat ukur</h3>
+<p>Probe, voltmeter, dan amperemeter otomatis diberi nama <b>P1, V1, A1</b> dan
+seterusnya. Nama itu bisa diganti, dan akan ikut muncul di kanvas maupun di
+osiloskop — jadi mudah tahu jejak mana milik alat mana.</p>
+
+<h2 id="membaca">6. Membaca hasil di kanvas</h2>
+
+<p>Warna di SIMBION punya arti tetap:</p>
+<table>
+  <tr><th>Warna</th><th>Artinya</th></tr>
+  <tr><td><span class="warna" style="background:#B87333"></span>Tembaga</td><td>Kawat dan badan komponen</td></tr>
+  <tr><td><span class="warna" style="background:#E9B949"></span>Emas</td><td>Arus dan muatan — <b>hanya itu</b></td></tr>
+  <tr><td><span class="warna" style="background:#E8E2D0"></span>Krem</td><td>Tegangan</td></tr>
+  <tr><td><span class="warna" style="background:#63A48C"></span>Hijau</td><td>Alat ukur</td></tr>
+  <tr><td><span class="warna" style="background:#86B6DE"></span>Biru</td><td>Pilihan dan kendali, bukan besaran fisis</td></tr>
+  <tr><td><span class="warna" style="background:#C4453B"></span>Merah</td><td>Peringatan</td></tr>
+</table>
+
+<p>Warna angka mengikuti besarannya: bacaan amperemeter emas, bacaan voltmeter
+krem — walau badan keduanya sama-sama hijau.</p>
+
+<h3>Titik emas yang bergerak</h3>
+<p>Kecepatannya sebanding dengan besar arus, dan arahnya adalah arah arus
+sebenarnya. Kalau titik bergerak berlawanan dari dugaan Anda, berarti arusnya
+memang mengalir ke arah itu.</p>
+
+<h3>Peringatan</h3>
+<table>
+  <tr><th>Tulisan</th><th>Artinya</th></tr>
+  <tr><td>TERBALIK!</td><td>Kapasitor elco terpasang terbalik dalam waktu lama. Elco nyata bisa meledak karenanya. Muncul hanya bila terbalik <b>berkelanjutan</b> — dipakai sebagai kopling AC tidak akan memicunya.</td></tr>
+  <tr><td>MASUKAN KURANG</td><td>Regulator 78xx/79xx tidak mendapat tegangan masuk yang cukup. 7805 butuh masukan minimal ±7 V.</td></tr>
+  <tr><td>BATAS ARUS</td><td>Beban terlalu berat; regulator membatasi arusnya.</td></tr>
+</table>
+
+<h2 id="osiloskop">7. Memakai osiloskop</h2>
+
+<p>Pasang <b>Probe</b> di titik yang ingin dilihat, lalu ketuk probe itu
+(saat Power menyala) — layar osiloskop terbuka sendiri. Bisa juga lewat tombol
+<b>Skop</b>.</p>
+
+<p>Voltmeter dan amperemeter juga bisa dijadikan kanal: buka panel rincian
+alat itu dan nyalakan tombol tampil-di-skop.</p>
+
+<p>Osiloskop menampilkan <b>dua kanal</b> sekaligus, seperti osiloskop analog di
+lab. Kalau ada alat ketiga, ketuk alat itu untuk menggantikan kanal kedua.</p>
+
+<h3>Angka di dalam layar</h3>
+<table>
+  <tr><th>Bacaan</th><th>Artinya</th></tr>
+  <tr><td>Vp-p</td><td>Tegangan puncak ke puncak — selisih titik tertinggi dan terendah.</td></tr>
+  <tr><td>T</td><td>Perioda, yaitu lama satu gelombang. Tertulis <b>DC</b> bila sinyalnya rata.</td></tr>
+  <tr><td>f</td><td>Frekuensi, kebalikan dari perioda.</td></tr>
+</table>
+
+<h3>Tab pengatur</h3>
+<p>Di bawah layar ada baris tab kecil: <b>P1</b>, <b>P2</b>, <b>T</b>, lalu
+<b>AUTO</b> dan <b>PICU</b>. Ketuk satu tab untuk membuka pengaturannya, ketuk
+lagi untuk menutup.</p>
+
+<table>
+  <tr><th>Pengatur</th><th>Gunanya</th></tr>
+  <tr><td>V/div</td><td>Skala tegangan tiap kotak. Perbesar bila gelombang terlalu kecil, perkecil bila terpotong.</td></tr>
+  <tr><td>Posisi ▲▼</td><td>Menggeser jejak naik-turun. <b>Bisa ditahan</b> untuk bergerak cepat.</td></tr>
+  <tr><td>Kopling DC/AC</td><td>DC menampilkan tumpuan searahnya; AC membuang tumpuan itu sehingga riak kecil di atas tegangan besar bisa dilihat jelas.</td></tr>
+  <tr><td>Time/div</td><td>Skala waktu tiap kotak, dari 5 detik sampai 100 mikrodetik.</td></tr>
+  <tr><td>Geser waktu</td><td>Menggeser ke kiri untuk melihat kejadian yang sudah lewat. Tombol <b>NOL</b> kembali ke terkini.</td></tr>
+  <tr><td>AUTO</td><td>Mengatur ulang skala dan posisi semua kanal secara otomatis. Tombol penyelamat kalau jejak hilang entah ke mana.</td></tr>
+  <tr><td>PICU</td><td>Membuat gelombang berkala berdiri diam, tidak berlari. Hampir selalu sebaiknya menyala.</td></tr>
+</table>
+
+<div class="kotak">
+  <span class="jd">Kalau jejaknya kelihatan bersegi</span>
+  <p>Perhalus <b>Time/div</b> ke nilai yang lebih kecil. Untuk sinyal 20 kHz,
+  pakai 100 µs/div atau lebih rapat. Pada jendela lebar, satu gelombang memang
+  hanya selebar beberapa piksel.</p>
+</div>
+
+<h2 id="komponen">8. Daftar komponen</h2>
+
+<table>
+  <tr><th>Kelompok</th><th>Isi</th></tr>
+  <tr><td>Sumber &amp; massa</td><td>Sumber DC, Sumber AC, VCC, Massa (GND)</td></tr>
+  <tr><td>Pasif</td><td>Resistor, Potensiometer, Kapasitor, Kapasitor Elco, Induktor, Transformator, Trafo CT, Bohlam, LDR</td></tr>
+  <tr><td>Aktif</td><td>Dioda, LED, Dioda zener, Fotodioda, Dioda Jembatan</td></tr>
+  <tr><td>Transistor</td><td>Transistor NPN, Transistor PNP</td></tr>
+  <tr><td>Op-amp &amp; IC</td><td>Op-amp, IC Regulator 78xx, IC Regulator 79xx</td></tr>
+  <tr><td>Alat ukur</td><td>Amperemeter, Voltmeter, Probe</td></tr>
+  <tr><td>Keluaran</td><td>Buzzer, Speaker</td></tr>
+  <tr><td>Lainnya</td><td>Saklar, Push Button (NO), Push Button (NC), Saklar SPDT, Saklar DPDT, Relay SPDT, Relay DPDT, Titik cabang</td></tr>
+</table>
+
+<h3>Komponen yang perlu penjelasan tambahan</h3>
+
+<table>
+  <tr><th>Komponen</th><th>Catatan</th></tr>
+  <tr><td>Sumber AC</td><td>Bentuk gelombang bisa dipilih: sinus, segitiga, gigi gergaji, kotak. Tersedia pilihan 220 V PLN (puncak 311 V).</td></tr>
+  <tr><td>Potensiometer</td><td>Kenopnya diputar langsung di kanvas lewat dua tombol kecil − dan +.</td></tr>
+  <tr><td>LDR &amp; Fotodioda</td><td>Tingkat cahaya diatur dengan dua tombol kecil di kanvas, seperti menyorotkan senter.</td></tr>
+  <tr><td>Push Button</td><td>Bekerja <b>selama ditekan</b> dan kembali saat jari diangkat — beda dari saklar biasa yang tetap.</td></tr>
+  <tr><td>Relay</td><td>Kumparan menggerakkan kontak. NC menyambung saat kumparan mati, NO saat kumparan aktif. Jangkarnya terlihat berpindah dan berubah hijau.</td></tr>
+  <tr><td>Trafo CT</td><td>Dua belitan sekunder dengan sadapan tengah — dasar catu daya simetris ±.</td></tr>
+  <tr><td>Buzzer</td><td>Berbunyi sendiri pada nada tetapnya, di kecepatan berapa pun.</td></tr>
+  <tr><td>Speaker</td><td>Mengeluarkan bentuk gelombang rangkaian yang sebenarnya, tetapi <b>hanya pada kecepatan 1×</b>.</td></tr>
+</table>
+
+<div class="kotak awas">
+  <span class="jd">Kenapa speaker bisu di gerak lambat</span>
+  <p>Pada kecepatan 0,01×, satu detik simulasi berlangsung seratus detik di
+  dunia nyata. Nada apa pun yang dikeluarkan akan salah tinggi. Karena itu
+  speaker sengaja dibisukan, dan simbolnya menuliskan alasannya.</p>
+</div>
+
+<h2 id="berkas">9. Menyimpan dan membuka</h2>
+
+<p>Rangkaian disimpan sebagai berkas berakhiran <code>.sbn</code>.</p>
+
+<table>
+  <tr><th>Menu</th><th>Gunanya</th></tr>
+  <tr><td>Simpan</td><td>Memperbarui berkas yang sedang dibuka. Kalau belum pernah disimpan, akan menanyakan tempatnya.</td></tr>
+  <tr><td>Simpan sebagai…</td><td>Menyimpan ke berkas baru, dengan pilihan nama dan folder.</td></tr>
+  <tr><td>Buka berkas…</td><td>Membuka berkas <code>.sbn</code> — juga menerima <code>.json</code> dari versi lama.</td></tr>
+  <tr><td>Berkas terakhir</td><td>Delapan rangkaian yang terakhir dibuka atau disimpan.</td></tr>
+</table>
+
+<div class="kotak baik">
+  <span class="jd">Pekerjaan tidak akan hilang</span>
+  <p>SIMBION menyimpan pekerjaan Anda secara otomatis di perangkat. Kalau
+  halaman tertutup, peramban mati, atau HP kehabisan baterai, rangkaian yang
+  sedang dikerjakan akan kembali seperti semula saat dibuka lagi — <b>walaupun
+  belum pernah Anda simpan</b>.</p>
+</div>
+
+<p>Membuka contoh atau mengosongkan papan selalu memulai rangkaian <b>baru</b>
+dengan nama baru, jadi berkas lama Anda tidak akan tertimpa.</p>
+
+<p>Di Chrome dan Edge, "Simpan sebagai…" membuka jendela pemilih berkas seperti
+aplikasi biasa. Di Firefox dan Safari, berkasnya diunduh ke folder Unduhan —
+itu batas peramban, bukan pengaturan yang bisa diubah.</p>
+
+<h2 id="kelas">10. Untuk mengajar di kelas</h2>
+
+<h3>Mode proyektor</h3>
+<p>Menu ⋯ → <b>Mode proyektor</b> memperbesar semua huruf dan menebalkan semua
+garis 1,5×, <b>tanpa mengubah ukuran rangkaian</b>. Ini berbeda dari zoom:
+zoom membesarkan gambar tetapi tulisannya tetap kecil.</p>
+
+<h3>Kecepatan waktu</h3>
+<p>Perlambat ke 0,05× atau 0,01× untuk menunjukkan hal yang biasanya terlalu
+cepat dilihat: kapasitor terisi, LED menyala perlahan, relay menarik.</p>
+
+<h3>Jeda</h3>
+<p>Bekukan waktu di saat yang menarik, lalu tunjukkan angka-angkanya sambil
+menjelaskan. Berbeda dari Power: rangkaian tetap bertenaga.</p>
+
+<h3>Contoh yang siap dipakai</h3>
+<p>Empat belas contoh di menu ⋯ tersusun dari yang sederhana ke yang rumit:</p>
+<ul>
+  <li><b>Dasar</b> — seri–paralel DC, pengisian RC, pembagi tegangan
+      potensiometer, LED &amp; pembatas arus</li>
+  <li><b>Penyearah &amp; catu daya</b> — penyearah jembatan + filter, catu daya
+      trafo → jembatan → filter, catu daya simetris ±5 V (trafo CT)</li>
+  <li><b>Penguat</b> — transistor sebagai saklar, penguat emitor bersama,
+      op-amp penguat membalik</li>
+  <li><b>Sensor, relay &amp; bunyi</b> — alarm cahaya: LDR + buzzer, relay:
+      saklar kecil beban besar, nada ke speaker, bentuk gelombang ke speaker</li>
+</ul>
+
+<div class="kotak baik">
+  <span class="jd">Contoh favorit untuk mengajar</span>
+  <p><b>Bentuk gelombang ke speaker.</b> Ganti bentuk gelombang sumber AC dan
+  siswa <b>mendengar</b> bedanya sinus, segitiga, gigi gergaji, dan kotak
+  sambil <b>melihat</b> jejaknya di osiloskop. Pastikan kecepatan 1×.</p>
+</div>
+
+<h2 id="masalah">11. Kalau ada masalah</h2>
+
+<table>
+  <tr><th>Gejala</th><th>Yang perlu diperiksa</th></tr>
+  <tr><td>Rangkaian tidak jalan sama sekali</td>
+      <td>Apakah sudah ada <b>Massa (GND)</b>? Apakah Power sudah menyala?</td></tr>
+  <tr><td>Semua tegangan nol</td>
+      <td>Biasanya ada kawat yang belum tersambung. Nyalakan mode tampilan <code>VAL</code> untuk melihat tegangan tiap titik dan menemukan di mana putusnya.</td></tr>
+  <tr><td>Osiloskop kosong</td>
+      <td>Sudah ada Probe? Power sudah menyala? Coba tombol <b>AUTO</b>.</td></tr>
+  <tr><td>Jejak bersegi</td>
+      <td>Perhalus Time/div.</td></tr>
+  <tr><td>Speaker tidak bunyi</td>
+      <td>Kecepatan harus <b>1×</b>. Bunyi juga baru menyala setelah Anda menyentuh layar sekali — aturan peramban.</td></tr>
+  <tr><td>Regulator keluarannya kurang</td>
+      <td>Lihat peringatan <b>MASUKAN KURANG</b>. 7805 butuh masukan minimal 7 V.</td></tr>
+  <tr><td>Elco menulis TERBALIK</td>
+      <td>Kutub + harus di sisi tegangan yang lebih tinggi. Untuk rel negatif, kutub + justru menghadap massa. Pakai tombol cermin untuk membaliknya.</td></tr>
+  <tr><td>Label angka bertumpuk</td>
+      <td>Perbesar zoom, atau renggangkan komponennya. Pada rangkaian padat, sebagian tegangan simpul memang sengaja disembunyikan.</td></tr>
+  <tr><td>Ada versi baru</td>
+      <td>Pita pemberitahuan muncul sendiri. Ketuk <b>Muat ulang</b> — pekerjaan Anda tidak hilang karena tersimpan otomatis.</td></tr>
+</table>
+
+<footer>
+  <p><b>SIMBION</b> — Simulasi Lab Interaktif Elektronika.<br>
+  <a href="index.html">Kembali ke aplikasi ›</a></p>
+</footer>
+
+</div>
+</body>
+</html>

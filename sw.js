@@ -10,6 +10,7 @@ const VERSI = 'simbion-v3.3';
 const BERKAS = [
   './',
   './index.html',
+  './panduan.html',
   './manifest.webmanifest',
   './ikon/ikon-192.png',
   './ikon/ikon-512.png',
