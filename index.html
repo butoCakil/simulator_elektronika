@@ -304,9 +304,24 @@
   html.pratinjau .cepatKosong,html.pratinjau .palet,html.pratinjau .tirai,
   html.pratinjau .sheet,html.pratinjau .pita,html.pratinjau .peringatan,
   html.pratinjau .nilaiPop{display:none !important}
+  /* Pratinjau: bilah mini (Power, Jeda, zoom, paskan) melayang di pojok kanvas */
+  .miniPrat{display:none}
+  html.pratinjau .miniPrat{display:flex;position:fixed;top:8px;right:8px;gap:4px;z-index:30;
+    background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:3px}
+  .miniPrat button{height:32px;min-width:32px;padding:0 8px;font-size:15px;letter-spacing:0;
+    text-transform:none;line-height:1}
+  .miniPrat .ik{width:16px;height:16px}
 </style>
 </head>
 <body>
+
+<div class="miniPrat" id="miniPrat" role="toolbar" aria-label="Alat pratinjau">
+  <button class="pw" id="pPower" aria-pressed="false" title="Power: hidupkan simulasi"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg></button>
+  <button id="pJeda" aria-pressed="false" title="Jeda: bekukan waktu simulasi"><svg class="ik" viewBox="0 0 24 24" style="stroke-width:3.4"><path d="M9 5v14M15 5v14"/></svg></button>
+  <button id="pMin" title="Perkecil" aria-label="Perkecil">−</button>
+  <button id="pPlus" title="Perbesar" aria-label="Perbesar">+</button>
+  <button id="pPas" title="Paskan tampilan" aria-label="Paskan tampilan"><svg class="ik" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
 
 <div class="bar">
   <button class="pw" id="bPower" aria-pressed="false"><svg class="ik" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg><span>Power</span></button>
@@ -1609,7 +1624,7 @@ const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
 const PENCIPTA='Benny Surahman';
-const VERSI_APP='3.6';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.7';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 /* Mode sematan: dibuka di dalam iframe oleh aplikasi lain (mis. e-learning) lewat
    ?sematan=1. Tanpa simpan otomatis, riwayat, dan pendaftaran service worker; berkas
@@ -5516,6 +5531,22 @@ if(SEMATAN){
       kirim('berkas',{berkas:potret()});
     }
   });
+  if(PRATINJAU){
+    /* Bilah mini pratinjau memakai tombol bilah yang sudah ada (Power, Jeda, Paskan) */
+    const pPower=document.getElementById('pPower'), pJeda=document.getElementById('pJeda');
+    const selaras=()=>{ pPower.setAttribute('aria-pressed',String(hidup)); pJeda.setAttribute('aria-pressed',String(jeda)) };
+    pPower.addEventListener('click',()=>{ bPower.click(); selaras() });
+    pJeda.addEventListener('click',()=>{ bJeda.click(); selaras() });
+    document.getElementById('pPas').addEventListener('click',()=>pas());
+    /* zoom ke titik tengah kanvas, batas sama dengan roda tetikus */
+    const zoomTengah=f=>{
+      const sx=cv.clientWidth/2, sy=cv.clientHeight/2;
+      const z=Math.min(Math.max(zoom*f,.45),2.8);
+      pan.x+=sx/zoom-sx/z; pan.y+=sy/zoom-sy/z; zoom=z;
+    };
+    document.getElementById('pMin').addEventListener('click',()=>zoomTengah(1/1.25));
+    document.getElementById('pPlus').addEventListener('click',()=>zoomTengah(1.25));
+  }
   diam=false;
   kirim('siap',{versiApp:VERSI_APP,versiBerkas:VERSI_BERKAS});
 }

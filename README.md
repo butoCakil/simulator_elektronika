@@ -110,6 +110,8 @@ referrer (halaman yang menyematkan), dan pesan keluar hanya dikirim ke origin it
 
 `?sematan=1&pratinjau=1` menampilkan **hanya kanvas rangkaian** (tanpa bilah alat, osiloskop,
 palet, dan panel bawah) dan hanya bisa dilihat: geser dan zoom boleh, mengubah rangkaian tidak
-bisa dan tidak ada pesan `berubah`. Dipakai guru melihat hasil kerja siswa di Super APP.
+bisa dan tidak ada pesan `berubah`. Sebuah bilah mini di pojok kanan atas menyediakan Power,
+Jeda, perkecil, perbesar, dan paskan tampilan (Power dan Jeda tidak tersimpan di berkas).
+Dipakai guru melihat hasil kerja siswa di Super APP.
 Protokol `muat`/`minta` sama seperti di atas.
 
