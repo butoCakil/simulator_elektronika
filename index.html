@@ -299,6 +299,11 @@
   html.sematan #mBuka,html.sematan #mRecentBuka,html.sematan #subRecent,
   html.sematan #mSimpan,html.sematan #mSimpanSbg,html.sematan #mPasang,
   html.sematan #mPanduan{display:none !important}
+  /* Pratinjau: hanya kanvas */
+  html.pratinjau .bar,html.pratinjau .skop,html.pratinjau .chip,html.pratinjau .cepat,
+  html.pratinjau .cepatKosong,html.pratinjau .palet,html.pratinjau .tirai,
+  html.pratinjau .sheet,html.pratinjau .pita,html.pratinjau .peringatan,
+  html.pratinjau .nilaiPop{display:none !important}
 </style>
 </head>
 <body>
@@ -1604,12 +1609,15 @@ const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
 const PENCIPTA='Benny Surahman';
-const VERSI_APP='3.5';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.6';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
 /* Mode sematan: dibuka di dalam iframe oleh aplikasi lain (mis. e-learning) lewat
    ?sematan=1. Tanpa simpan otomatis, riwayat, dan pendaftaran service worker; berkas
    dipertukarkan dengan halaman induk lewat postMessage (lihat bagian MODE SEMATAN). */
 const SEMATAN=new URLSearchParams(location.search).get('sematan')==='1' && window.parent!==window;
+/* Pratinjau: hanya kanvas rangkaian, hanya lihat (geser dan zoom saja). Dipakai guru melihat hasil
+   siswa di Super APP. Aktif dengan ?sematan=1&pratinjau=1. */
+const PRATINJAU=SEMATAN && new URLSearchParams(location.search).get('pratinjau')==='1';
 let kabarBerubah=()=>{};   /* diisi di bagian MODE SEMATAN */
 let namaProyek='';   /* diisi saat mulai, lihat namaBawaan() */
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
@@ -4032,6 +4040,7 @@ cv.addEventListener('pointerdown',e=>{
     aksi=null; tekanUji=null; return;
   }
   awal={x:sx,y:sy}; sudahGerak=false; sudahRekam=false;
+  if(PRATINJAU){ aksi={t:'geserPan',x:sx,y:sy,pan:{...pan}}; tekanUji=null; return }  /* hanya geser */
   const [wx,wy]=keDunia(sx,sy);
   tekanUji=ujiTitik(wx,wy);
 
@@ -4063,6 +4072,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   const [sx,sy]=posKanvas(e);
   if(!jari.has(e.pointerId)){
+    if(PRATINJAU){ cv.style.cursor='grab'; return }
     const [wx,wy]=keDunia(sx,sy);
     const u=ujiTitik(wx,wy);
     sorot=(u.t==='kosong')?null:u;
@@ -4193,6 +4203,7 @@ addEventListener('keydown',e=>{
   /* Jangan sentuh papan ketik bila fokus sedang berada di kotak isian.
      Tanpa penjaga ini, Backspace saat mengetik nilai komponen justru
      menghapus komponennya. */
+  if(PRATINJAU) return;
   const f=e.target;
   if(f&&(f.tagName==='INPUT'||f.tagName==='SELECT'||f.tagName==='TEXTAREA'||f.isContentEditable)) return;
   if(e.key==='Escape'){
@@ -5476,6 +5487,7 @@ requestAnimationFrame(bingkai);
    ========================================================================== */
 if(SEMATAN){
   document.documentElement.classList.add('sematan');
+  if(PRATINJAU) document.documentElement.classList.add('pratinjau');
   let asalInduk=location.origin;
   try{ if(document.referrer) asalInduk=new URL(document.referrer).origin }catch(_){}
   const diizinkan=new Set([location.origin,asalInduk]);
