@@ -295,6 +295,10 @@
     font-size:12px;text-transform:none;letter-spacing:0;text-align:left}
   .kisi7 button.pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   body.proyektor .kisi7 button.pk{height:58px;font-size:14px}
+  /* Mode sematan: berkas dikelola aplikasi induk, jadi menu berkas dan pemasangan disembunyikan */
+  html.sematan #mBuka,html.sematan #mRecentBuka,html.sematan #subRecent,
+  html.sematan #mSimpan,html.sematan #mSimpanSbg,html.sematan #mPasang,
+  html.sematan #mPanduan{display:none !important}
 </style>
 </head>
 <body>
@@ -1600,8 +1604,13 @@ const MODE_NAMA=['CLR','VAL','BOX','ALL'];
 const APLIKASI='SIMBION';
 const APLIKASI_LAMA=['SASMITA'];   /* nama lama, agar berkas lama tetap bisa dibuka */
 const PENCIPTA='Benny Surahman';
-const VERSI_APP='3.4';     /* naikkan bersama nomor VERSI di sw.js */
+const VERSI_APP='3.5';     /* naikkan bersama nomor VERSI di sw.js */
 const VERSI_BERKAS=2;      /* naikkan bila bentuk berkas simpanan berubah */
+/* Mode sematan: dibuka di dalam iframe oleh aplikasi lain (mis. e-learning) lewat
+   ?sematan=1. Tanpa simpan otomatis, riwayat, dan pendaftaran service worker; berkas
+   dipertukarkan dengan halaman induk lewat postMessage (lihat bagian MODE SEMATAN). */
+const SEMATAN=new URLSearchParams(location.search).get('sematan')==='1' && window.parent!==window;
+let kabarBerubah=()=>{};   /* diisi di bagian MODE SEMATAN */
 let namaProyek='';   /* diisi saat mulai, lihat namaBawaan() */
 let jeda=false;                     /* waktu simulasi dibekukan di tempat */
 let lalu=0;                         /* penanda waktu bingkai sebelumnya */
@@ -4867,12 +4876,14 @@ document.getElementById('mSimpanSbg').addEventListener('click',tutupMenu(simpanS
 /* ---- simpan otomatis: rangkaian tidak hilang walau halaman dimuat ulang ---- */
 let jamAuto=null;
 function simpanOtomatis(){
+  if(SEMATAN){ kabarBerubah(); return }
   clearTimeout(jamAuto);
   jamAuto=setTimeout(()=>{
     try{ localStorage.setItem(KUNCI_AUTO,potret()) }catch(_){}
   },600);            /* ditunda sebentar supaya tidak menulis tiap gerakan */
 }
 function pulihkanOtomatis(){
+  if(SEMATAN) return false;
   try{
     const t=localStorage.getItem(KUNCI_AUTO);
     if(!t) return false;
@@ -4887,6 +4898,7 @@ function bacaRecent(){
   try{ return JSON.parse(localStorage.getItem(KUNCI_RECENT))||[] }catch(_){ return [] }
 }
 function catatRecent(){
+  if(SEMATAN) return;
   try{
     const isi=potret();
     let r=bacaRecent().filter(x=>x.nama!==namaProyek);
@@ -4963,9 +4975,12 @@ function terapkanBerkas(teks,handle){
     if(handle) namaProyek=handle.name.replace(/\.(sbn|json)$/i,'');
     segarkanNamaSimpan(); pas(); segarkan(); simpanOtomatis(); catatRecent();
     kabarSingkat('Dibuka: '+namaProyek);
+    return null;
   }catch(e){
     elPeringatan.style.color='';
-    elPeringatan.textContent=(e&&e.message)?e.message:'Berkas tidak bisa dibaca';
+    const pesan=(e && e.message && !(e instanceof SyntaxError))?e.message:'Berkas tidak bisa dibaca';
+    elPeringatan.textContent=pesan;
+    return pesan;
   }
 }
 fBuka.addEventListener('change',()=>{
@@ -5310,7 +5325,7 @@ const pitaBaru=document.getElementById('pitaBaru');
 document.getElementById('bTundaBaru').addEventListener('click',()=>
   pitaBaru.classList.remove('tampil'));
 
-if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+if(!SEMATAN && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js').then(reg=>{
       const pantau=sw=>{
@@ -5415,7 +5430,7 @@ if(iOS && !terpasang && /^https?:$/.test(location.protocol)){
 
 /* Jaring pengaman terakhir: tulis segera saat halaman ditinggalkan atau
    disembunyikan, tanpa menunggu penundaan simpan otomatis. */
-const tulisAuto=()=>{ try{ localStorage.setItem(KUNCI_AUTO,potret()) }catch(_){} };
+const tulisAuto=()=>{ if(SEMATAN) return; try{ localStorage.setItem(KUNCI_AUTO,potret()) }catch(_){} };
 addEventListener('pagehide',tulisAuto);
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) tulisAuto() });
 addEventListener('resize',()=>ukur());
@@ -5445,6 +5460,53 @@ if(!pulihkanOtomatis()){ rangkaianBaru(); pan={x:-30,y:-30}; zoom=1 }
 gambarIns(); isiRecent(); segarkanNamaSimpan(); segarkanCepat();
 tumpukan.length=0; majuStack.length=0; setRiwayat(); segarkan();
 requestAnimationFrame(bingkai);
+
+/* ==========================================================================
+   MODE SEMATAN (postMessage)
+   Hanya aktif dengan ?sematan=1 di dalam iframe. Semua pesan berbentuk
+   {alat:'simbion', v:1, tipe, ...}. Pesan hanya diterima dari window induk dan dari
+   origin yang sama atau origin referrer (halaman yang menyematkan); pesan keluar dikirim
+   hanya ke origin itu.
+     induk → SIMBION   muat   {berkas: teks .sbn}   ganti rangkaian dengan isi berkas
+                       minta                         minta rangkaian saat ini
+     SIMBION → induk   siap    {versiApp, versiBerkas}
+                       dimuat  {galat: null | teks}  jawaban untuk "muat"
+                       berkas  {berkas: teks .sbn}   jawaban untuk "minta"
+                       berubah {berkas: teks .sbn}   rangkaian berubah (ditunda 0,6 dtk)
+   ========================================================================== */
+if(SEMATAN){
+  document.documentElement.classList.add('sematan');
+  let asalInduk=location.origin;
+  try{ if(document.referrer) asalInduk=new URL(document.referrer).origin }catch(_){}
+  const diizinkan=new Set([location.origin,asalInduk]);
+  const kirim=(tipe,isi)=>{
+    try{ parent.postMessage({alat:'simbion',v:1,tipe,...isi},asalInduk) }catch(_){}
+  };
+  let jamKabar=null, diam=true;
+  kabarBerubah=()=>{
+    if(diam) return;
+    clearTimeout(jamKabar);
+    jamKabar=setTimeout(()=>kirim('berubah',{berkas:potret()}),600);
+  };
+  addEventListener('message',e=>{
+    const m=e.data;
+    if(e.source!==parent || !diizinkan.has(e.origin)) return;
+    if(!m || m.alat!=='simbion' || m.v!==1) return;
+    if(m.tipe==='muat'){
+      if(typeof m.berkas!=='string'){ kirim('dimuat',{galat:'Isi berkas tidak ada'}); return }
+      /* memuat bukan perubahan dari pengguna: jangan dipantulkan sebagai "berubah" */
+      diam=true; clearTimeout(jamKabar);
+      const galat=terapkanBerkas(m.berkas,null);
+      tumpukan.length=0; majuStack.length=0; setRiwayat();
+      setTimeout(()=>{ diam=false },0);
+      kirim('dimuat',{galat:galat||null});
+    }else if(m.tipe==='minta'){
+      kirim('berkas',{berkas:potret()});
+    }
+  });
+  diam=false;
+  kirim('siap',{versiApp:VERSI_APP,versiBerkas:VERSI_BERKAS});
+}
 </script>
 </body>
 </html>
