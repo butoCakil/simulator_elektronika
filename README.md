@@ -82,3 +82,27 @@ Di `index.html`, dua tetapan berdekatan:
 - `GESER_MAKS` (40 divisi) — jangkauan peluncur geser waktu. Ini yang
   menentukan kehalusan **peluncur**: jangkauan dibagi lebarnya dalam piksel.
   Makin kecil, makin halus, tetapi makin pendek jangkauan ke belakang.
+
+---
+
+## Mode sematan (dipakai aplikasi lain)
+
+SIMBION bisa ditanam di iframe oleh aplikasi lain, misalnya e-learning Super APP TE
+(`te.smknbansari.sch.id/simbion`). Tambahkan `?sematan=1` pada alamatnya. Di mode ini
+menu berkas dan pemasangan disembunyikan, tidak ada simpan otomatis atau riwayat di
+`localStorage`, dan service worker tidak didaftarkan. Berkas `.sbn` dipertukarkan dengan
+halaman induk lewat `postMessage`; semua pesan berbentuk `{alat:'simbion', v:1, tipe, ...}`.
+
+| Arah | Pesan | Isi |
+|---|---|---|
+| induk → SIMBION | `muat` | `berkas`: teks `.sbn`; mengganti rangkaian |
+| induk → SIMBION | `minta` | meminta rangkaian saat ini |
+| SIMBION → induk | `siap` | `versiApp`, `versiBerkas`; dikirim sekali setelah siap |
+| SIMBION → induk | `dimuat` | `galat`: `null` bila berhasil, selain itu teks alasan |
+| SIMBION → induk | `berkas` | `berkas`: teks `.sbn`; jawaban untuk `minta` |
+| SIMBION → induk | `berubah` | `berkas`: teks `.sbn`; rangkaian diubah pengguna (ditunda 0,6 detik) |
+
+Pesan hanya diterima dari window induk yang berasal dari origin yang sama atau origin
+referrer (halaman yang menyematkan), dan pesan keluar hanya dikirim ke origin itu.
+`muat` tidak dipantulkan sebagai `berubah`.
+
